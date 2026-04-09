@@ -1431,22 +1431,27 @@ function buildEditorContent(initialFile) {
     <div class="editor-toolbar">
       <div class="editor-tabs" id="ed-tabs"></div>
       <div class="editor-toolbar-right">
+        <button class="editor-preview-btn hidden" id="ed-preview-btn">Preview</button>
         <span class="editor-lang" id="ed-lang"></span>
         <span class="editor-status" id="ed-status"></span>
       </div>
     </div>
     <div class="editor-container" id="ed-container"></div>
+    <div class="editor-preview hidden" id="ed-preview"></div>
   `;
 
   const tabsEl = el.querySelector('#ed-tabs');
   const langEl = el.querySelector('#ed-lang');
   const statusEl = el.querySelector('#ed-status');
+  const previewBtn = el.querySelector('#ed-preview-btn');
+  const previewEl = el.querySelector('#ed-preview');
   const containerEl = el.querySelector('#ed-container');
 
   let editor = null;
   let tabs = []; // { path, name, model, modified }
   let activeTab = -1;
   let monacoReady = false;
+  let previewMode = false;
 
   // extension → Monaco language
   const langMap = {
@@ -1537,6 +1542,11 @@ function buildEditorContent(initialFile) {
         saveCurrentTab();
       });
 
+      // Ctrl+E to toggle preview (markdown)
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyE, () => {
+        togglePreview();
+      });
+
       // track modifications
       editor.onDidChangeModelContent(() => {
         if (activeTab >= 0 && tabs[activeTab]) {
@@ -1588,14 +1598,70 @@ function buildEditorContent(initialFile) {
     switchTab(tabs.length - 1);
   }
 
+  function isMarkdown(name) {
+    return /\.(md|markdown|mdown|mkd)$/i.test(name);
+  }
+
   function switchTab(idx) {
     if (idx < 0 || idx >= tabs.length) return;
     activeTab = idx;
     const tab = tabs[idx];
     editor.setModel(tab.model);
     langEl.textContent = tab.model.getLanguageId();
+
+    // show preview button for markdown
+    const isMd = isMarkdown(tab.name);
+    previewBtn.classList.toggle('hidden', !isMd);
+
+    // exit preview if switching to non-markdown
+    if (!isMd && previewMode) {
+      previewMode = false;
+      showEditor();
+    }
+
     renderTabs();
   }
+
+  function togglePreview() {
+    if (activeTab < 0) return;
+    const tab = tabs[activeTab];
+    if (!isMarkdown(tab.name)) return;
+
+    previewMode = !previewMode;
+    if (previewMode) {
+      showPreview();
+    } else {
+      showEditor();
+    }
+  }
+
+  function showPreview() {
+    const content = tabs[activeTab].model.getValue();
+    const html = typeof marked !== 'undefined' ? marked.parse(content) : content;
+
+    previewEl.innerHTML = `<div class="md-rendered">${html}</div>`;
+    previewEl.classList.remove('hidden');
+    containerEl.classList.add('hidden');
+    previewBtn.textContent = 'Edit';
+    previewBtn.classList.add('active');
+    statusEl.textContent = 'preview';
+
+    // click anywhere in preview to edit at that spot
+    previewEl.addEventListener('dblclick', () => {
+      togglePreview();
+    }, { once: true });
+  }
+
+  function showEditor() {
+    previewEl.classList.add('hidden');
+    containerEl.classList.remove('hidden');
+    previewBtn.textContent = 'Preview';
+    previewBtn.classList.remove('active');
+    statusEl.textContent = '';
+    if (editor) editor.focus();
+  }
+
+  previewBtn.addEventListener('click', togglePreview);
 
   function closeTab(idx) {
     const tab = tabs[idx];
