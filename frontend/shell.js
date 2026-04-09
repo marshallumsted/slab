@@ -713,14 +713,6 @@ function buildFilesContent() {
     });
   });
 
-  function updateSidebarActive() {
-    sidebarItems.forEach(item => {
-      const key = item.dataset.pathKey;
-      const path = key ? resolveSidebarPath(key) : item.dataset.path;
-      item.classList.toggle('active', path === currentPath);
-    });
-  }
-
   async function navigate(path) {
     try {
       const res = await fetch(`/api/files?path=${encodeURIComponent(path)}`);
@@ -1199,6 +1191,12 @@ function buildLogsContent() {
     </div>
   `;
 }
+
+// ── Suppress system right-click across entire UI ──
+
+document.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+});
 
 // ── Keyboard ──
 
