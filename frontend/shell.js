@@ -387,17 +387,105 @@ function buildSysmonContent() {
 }
 
 function buildFilesContent() {
-  return `
-    <div style="font-family:var(--font-mono);font-size:.75rem;">
-      <div style="color:var(--gray-500);margin-bottom:.8rem;letter-spacing:.06em;text-transform:uppercase;">/ home</div>
-      <div style="display:flex;flex-direction:column;gap:2px;">
-        <div style="padding:.4rem .6rem;background:var(--gray-800);color:var(--gray-300);cursor:pointer;">Documents/</div>
-        <div style="padding:.4rem .6rem;background:var(--gray-800);color:var(--gray-300);cursor:pointer;">Downloads/</div>
-        <div style="padding:.4rem .6rem;background:var(--gray-800);color:var(--gray-300);cursor:pointer;">Pictures/</div>
-        <div style="padding:.4rem .6rem;background:var(--gray-800);color:var(--gray-300);cursor:pointer;">.config/</div>
-      </div>
+  const el = document.createElement('div');
+  el.className = 'files-app';
+  el.innerHTML = `
+    <div class="files-toolbar">
+      <button class="files-back">&larr;</button>
+      <div class="files-path"></div>
     </div>
+    <div class="files-header">
+      <span class="files-col-name" data-sort="name">Name</span>
+      <span class="files-col-size" data-sort="size">Size</span>
+      <span class="files-col-mod" data-sort="modified">Modified</span>
+    </div>
+    <div class="files-list"></div>
   `;
+
+  let currentPath = '/';
+  const pathEl = el.querySelector('.files-path');
+  const listEl = el.querySelector('.files-list');
+  const backBtn = el.querySelector('.files-back');
+  let parentPath = null;
+
+  async function navigate(path) {
+    try {
+      const res = await fetch(`/api/files?path=${encodeURIComponent(path)}`);
+      const data = await res.json();
+      currentPath = data.path;
+      parentPath = data.parent;
+
+      // build breadcrumb
+      const parts = currentPath.split('/').filter(Boolean);
+      let crumb = '<span class="files-crumb" data-path="/">/</span>';
+      let accumulated = '';
+      for (const part of parts) {
+        accumulated += '/' + part;
+        crumb += `<span class="files-crumb" data-path="${accumulated}">${part}/</span>`;
+      }
+      pathEl.innerHTML = crumb;
+
+      // attach breadcrumb clicks
+      pathEl.querySelectorAll('.files-crumb').forEach(c => {
+        c.addEventListener('click', () => navigate(c.dataset.path));
+      });
+
+      // build file list
+      listEl.innerHTML = '';
+      for (const entry of data.entries) {
+        const row = document.createElement('div');
+        row.className = 'files-row';
+        if (entry.is_dir) row.classList.add('files-row--dir');
+
+        const name = document.createElement('span');
+        name.className = 'files-col-name';
+        name.textContent = entry.is_dir ? entry.name + '/' : entry.name;
+
+        const size = document.createElement('span');
+        size.className = 'files-col-size';
+        size.textContent = entry.is_dir ? '--' : formatSize(entry.size);
+
+        const mod = document.createElement('span');
+        mod.className = 'files-col-mod';
+        mod.textContent = entry.modified ? formatDate(entry.modified) : '--';
+
+        row.appendChild(name);
+        row.appendChild(size);
+        row.appendChild(mod);
+
+        if (entry.is_dir) {
+          row.addEventListener('dblclick', () => navigate(currentPath + '/' + entry.name));
+        }
+
+        listEl.appendChild(row);
+      }
+    } catch (e) {
+      listEl.innerHTML = '<div class="files-error">failed to load directory</div>';
+    }
+  }
+
+  backBtn.addEventListener('click', () => {
+    if (parentPath) navigate(parentPath);
+  });
+
+  navigate('/');
+  return el;
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' K';
+  if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' M';
+  return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' G';
+}
+
+function formatDate(epoch) {
+  const d = new Date(epoch * 1000);
+  const mo = (d.getMonth() + 1).toString().padStart(2, '0');
+  const day = d.getDate().toString().padStart(2, '0');
+  const h = d.getHours().toString().padStart(2, '0');
+  const m = d.getMinutes().toString().padStart(2, '0');
+  return `${mo}-${day} ${h}:${m}`;
 }
 
 function buildEditorContent() {
