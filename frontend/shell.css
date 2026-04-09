@@ -488,6 +488,12 @@
   background: var(--gray-700);
 }
 
+.files-row.selected {
+  background: var(--gray-700);
+  border-left: 2px solid var(--red);
+  padding-left: 6px;
+}
+
 .files-row--dir {
   color: var(--white);
   cursor: pointer;
@@ -528,6 +534,12 @@
 }
 
 .files-card:hover {
+  background: var(--gray-700);
+}
+
+.files-card.selected {
+  outline: 2px solid var(--red);
+  outline-offset: -2px;
   background: var(--gray-700);
 }
 

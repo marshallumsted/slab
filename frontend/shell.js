@@ -574,12 +574,75 @@ function buildFilesContent() {
     }, { root: listEl, rootMargin: '100px 0px' });
   }
 
+  // selection state
+  let selected = new Set();
+  let lastClickedIdx = -1;
+  let allItems = []; // DOM elements in order
+
+  function clearSelection() {
+    selected.clear();
+    lastClickedIdx = -1;
+    allItems.forEach(item => item.el.classList.remove('selected'));
+  }
+
+  function setSelected(idx, add) {
+    if (add) {
+      selected.add(idx);
+    } else {
+      selected.delete(idx);
+    }
+    allItems[idx].el.classList.toggle('selected', selected.has(idx));
+  }
+
+  function handleClick(e, idx, entry) {
+    // dirs: single click navigates
+    if (entry.is_dir) {
+      if (!e.ctrlKey && !e.shiftKey) {
+        navigate(currentPath + '/' + entry.name);
+        return;
+      }
+    }
+
+    // shift+click: range select
+    if (e.shiftKey && lastClickedIdx >= 0) {
+      const from = Math.min(lastClickedIdx, idx);
+      const to = Math.max(lastClickedIdx, idx);
+      if (!e.ctrlKey) clearSelection();
+      for (let i = from; i <= to; i++) {
+        setSelected(i, true);
+      }
+      return;
+    }
+
+    // ctrl+click: toggle individual
+    if (e.ctrlKey) {
+      setSelected(idx, !selected.has(idx));
+      lastClickedIdx = idx;
+      return;
+    }
+
+    // plain click: select single
+    clearSelection();
+    setSelected(idx, true);
+    lastClickedIdx = idx;
+  }
+
+  function handleDblClick(e, idx, entry) {
+    // double-click on files — action placeholder (no-op for now)
+    if (!entry.is_dir) {
+      // future: open file
+    }
+  }
+
   function renderEntries(entries) {
     listEl.innerHTML = '';
     listEl.className = viewMode === 'grid' ? 'files-list files-list--grid' : 'files-list';
     setupPreviewObserver();
+    selected.clear();
+    lastClickedIdx = -1;
+    allItems = [];
 
-    for (const entry of entries) {
+    entries.forEach((entry, idx) => {
       const isImage = !entry.is_dir && isImageFile(entry.name);
       const imgUrl = isImage ? `/api/raw?path=${encodeURIComponent(currentPath + '/' + entry.name)}` : null;
 
@@ -608,10 +671,10 @@ function buildFilesContent() {
         card.appendChild(icon);
         card.appendChild(name);
 
-        if (entry.is_dir) {
-          card.addEventListener('click', () => navigate(currentPath + '/' + entry.name));
-        }
+        card.addEventListener('click', (e) => handleClick(e, idx, entry));
+        card.addEventListener('dblclick', (e) => handleDblClick(e, idx, entry));
 
+        allItems.push({ el: card, entry });
         listEl.appendChild(card);
       } else {
         const row = document.createElement('div');
@@ -643,14 +706,19 @@ function buildFilesContent() {
         row.appendChild(size);
         row.appendChild(mod);
 
-        if (entry.is_dir) {
-          row.addEventListener('click', () => navigate(currentPath + '/' + entry.name));
-        }
+        row.addEventListener('click', (e) => handleClick(e, idx, entry));
+        row.addEventListener('dblclick', (e) => handleDblClick(e, idx, entry));
 
+        allItems.push({ el: row, entry });
         listEl.appendChild(row);
       }
-    }
+    });
   }
+
+  // click empty space in list to deselect
+  listEl.addEventListener('click', (e) => {
+    if (e.target === listEl) clearSelection();
+  });
 
   backBtn.addEventListener('click', () => {
     if (parentPath) navigate(parentPath);
