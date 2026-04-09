@@ -2,6 +2,7 @@ use axum::{Router, response::Json, routing::get};
 use serde_json::json;
 use tower_http::services::ServeDir;
 
+mod config;
 mod files;
 
 #[tokio::main]
@@ -14,7 +15,8 @@ async fn main() {
     let api = Router::new()
         .route("/api/files", get(files::list_dir))
         .route("/api/raw", get(files::serve_raw))
-        .route("/api/user", get(get_user));
+        .route("/api/user", get(get_user))
+        .route("/api/config", get(config::get_config).post(config::set_config));
 
     let app = api.fallback_service(ServeDir::new("frontend"));
 

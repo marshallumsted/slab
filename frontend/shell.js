@@ -391,22 +391,14 @@ function buildFilesContent() {
   el.className = 'files-app';
   el.innerHTML = `
     <div class="files-sidebar">
-      <div class="files-sidebar-section">
-        <div class="files-sidebar-label">Places</div>
-        <div class="files-sidebar-item" data-path-key="home">Home</div>
-        <div class="files-sidebar-item" data-path-key="desktop">Desktop</div>
-        <div class="files-sidebar-item" data-path-key="documents">Documents</div>
-        <div class="files-sidebar-item" data-path-key="downloads">Downloads</div>
-        <div class="files-sidebar-item" data-path-key="pictures">Pictures</div>
-        <div class="files-sidebar-item" data-path-key="music">Music</div>
-        <div class="files-sidebar-item" data-path-key="videos">Videos</div>
-      </div>
+      <div class="files-sidebar-section" id="fs-places"></div>
       <div class="files-sidebar-section">
         <div class="files-sidebar-label">System</div>
         <div class="files-sidebar-item" data-path="/">Root (/)</div>
         <div class="files-sidebar-item" data-path="/tmp">Tmp</div>
         <div class="files-sidebar-item" data-path="/etc">Etc</div>
       </div>
+      <div class="files-sidebar-section" id="fs-network"></div>
     </div>
     <div class="files-main">
       <div class="files-toolbar">
@@ -431,35 +423,247 @@ function buildFilesContent() {
       </div>
       <div class="files-list"></div>
     </div>
+    <!-- Add Place dialog -->
+    <div class="files-dialog hidden" id="fs-add-place-dlg">
+      <div class="files-dialog-box">
+        <div class="files-dialog-title">Add Place</div>
+        <label class="files-dialog-label">Name</label>
+        <input class="files-dialog-input" id="fs-place-name" type="text" spellcheck="false" placeholder="My Folder" />
+        <label class="files-dialog-label">Path</label>
+        <input class="files-dialog-input" id="fs-place-path" type="text" spellcheck="false" placeholder="/path/to/folder" />
+        <div class="files-dialog-actions">
+          <button class="files-dialog-btn files-dialog-cancel" id="fs-place-cancel">Cancel</button>
+          <button class="files-dialog-btn files-dialog-ok" id="fs-place-ok">Add</button>
+        </div>
+      </div>
+    </div>
+    <!-- Add Network Place dialog -->
+    <div class="files-dialog hidden" id="fs-add-net-dlg">
+      <div class="files-dialog-box">
+        <div class="files-dialog-title">Add Network Place</div>
+        <label class="files-dialog-label">Protocol</label>
+        <select class="files-dialog-input" id="fs-net-proto">
+          <option value="smb">SMB (Windows Share)</option>
+          <option value="sftp">SFTP</option>
+          <option value="ftp">FTP</option>
+          <option value="nfs">NFS</option>
+          <option value="webdav">WebDAV</option>
+        </select>
+        <label class="files-dialog-label">Name</label>
+        <input class="files-dialog-input" id="fs-net-name" type="text" spellcheck="false" placeholder="My NAS" />
+        <label class="files-dialog-label">Host</label>
+        <input class="files-dialog-input" id="fs-net-host" type="text" spellcheck="false" placeholder="192.168.1.100" />
+        <label class="files-dialog-label">Port (optional)</label>
+        <input class="files-dialog-input" id="fs-net-port" type="text" spellcheck="false" placeholder="default" />
+        <label class="files-dialog-label">Path</label>
+        <input class="files-dialog-input" id="fs-net-path" type="text" spellcheck="false" placeholder="/share" />
+        <label class="files-dialog-label">Username (optional)</label>
+        <input class="files-dialog-input" id="fs-net-user" type="text" spellcheck="false" placeholder="" />
+        <div class="files-dialog-row">
+          <input type="checkbox" id="fs-net-pin" checked />
+          <label for="fs-net-pin" class="files-dialog-label" style="margin:0;">Pin to sidebar</label>
+        </div>
+        <div class="files-dialog-actions">
+          <button class="files-dialog-btn files-dialog-cancel" id="fs-net-cancel">Cancel</button>
+          <button class="files-dialog-btn files-dialog-ok" id="fs-net-ok">Add</button>
+        </div>
+      </div>
+    </div>
   `;
 
   let currentPath = HOME;
   let viewMode = 'list';
   let editing = false;
+  let slabConfig = null;
   const pathEl = el.querySelector('.files-path');
   const pathInput = el.querySelector('.files-path-input');
   const pathBar = el.querySelector('.files-pathbar');
   const listEl = el.querySelector('.files-list');
   const headerEl = el.querySelector('.files-header');
   const backBtn = el.querySelector('.files-back');
-  const sidebarItems = el.querySelectorAll('.files-sidebar-item');
   const viewBtns = el.querySelectorAll('.files-view-btn');
+  const placesEl = el.querySelector('#fs-places');
+  const networkEl = el.querySelector('#fs-network');
+  const systemItems = el.querySelectorAll('.files-sidebar-section:nth-child(2) .files-sidebar-item');
   let parentPath = null;
   let lastEntries = [];
 
-  function resolveSidebarPath(key) {
-    const map = { home: HOME, desktop: HOME + '/Desktop', documents: HOME + '/Documents', downloads: HOME + '/Downloads', pictures: HOME + '/Pictures', music: HOME + '/Music', videos: HOME + '/Videos' };
-    return map[key] || HOME;
+  // system items are static
+  systemItems.forEach(item => {
+    item.addEventListener('click', () => navigate(item.dataset.path));
+  });
+
+  // ── Config loading ──
+  async function loadConfig() {
+    try {
+      const res = await fetch('/api/config');
+      slabConfig = await res.json();
+    } catch {
+      slabConfig = { places: [], network: [] };
+    }
+    renderSidebar();
   }
 
-  // sidebar navigation
-  sidebarItems.forEach(item => {
-    item.addEventListener('click', () => {
-      const key = item.dataset.pathKey;
-      const path = key ? resolveSidebarPath(key) : item.dataset.path;
-      navigate(path);
+  async function saveConfig() {
+    await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(slabConfig),
     });
+  }
+
+  // ── Sidebar rendering ──
+  function renderSidebar() {
+    // Places
+    placesEl.innerHTML = '';
+    const placesHeader = document.createElement('div');
+    placesHeader.className = 'files-sidebar-header';
+    placesHeader.innerHTML = '<span class="files-sidebar-label">Places</span><button class="files-sidebar-add" title="Add place">+</button>';
+    placesHeader.querySelector('.files-sidebar-add').addEventListener('click', openAddPlace);
+    placesEl.appendChild(placesHeader);
+
+    for (const place of slabConfig.places) {
+      const item = document.createElement('div');
+      item.className = 'files-sidebar-item';
+      item.dataset.path = place.path;
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'files-sidebar-item-name';
+      nameSpan.textContent = place.name;
+      item.appendChild(nameSpan);
+
+      if (!place.builtin) {
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'files-sidebar-remove';
+        removeBtn.textContent = '\u00d7';
+        removeBtn.title = 'Remove';
+        removeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          slabConfig.places = slabConfig.places.filter(p => p !== place);
+          saveConfig();
+          renderSidebar();
+        });
+        item.appendChild(removeBtn);
+      }
+
+      item.addEventListener('click', () => navigate(place.path));
+      placesEl.appendChild(item);
+    }
+
+    // Network
+    networkEl.innerHTML = '';
+    const netHeader = document.createElement('div');
+    netHeader.className = 'files-sidebar-header';
+    netHeader.innerHTML = '<span class="files-sidebar-label">Network</span><button class="files-sidebar-add" title="Add network place">+</button>';
+    netHeader.querySelector('.files-sidebar-add').addEventListener('click', openAddNetwork);
+    networkEl.appendChild(netHeader);
+
+    for (const net of slabConfig.network) {
+      const item = document.createElement('div');
+      item.className = 'files-sidebar-item files-sidebar-item--net';
+      item.dataset.netId = net.id;
+
+      const proto = document.createElement('span');
+      proto.className = 'files-sidebar-proto';
+      proto.textContent = net.protocol.toUpperCase();
+      item.appendChild(proto);
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'files-sidebar-item-name';
+      nameSpan.textContent = net.name;
+      item.appendChild(nameSpan);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'files-sidebar-remove';
+      removeBtn.textContent = '\u00d7';
+      removeBtn.title = 'Remove';
+      removeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        slabConfig.network = slabConfig.network.filter(n => n.id !== net.id);
+        saveConfig();
+        renderSidebar();
+      });
+      item.appendChild(removeBtn);
+
+      item.addEventListener('click', () => {
+        // placeholder — network browsing not implemented yet
+      });
+
+      networkEl.appendChild(item);
+    }
+
+    if (slabConfig.network.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'files-sidebar-empty';
+      empty.textContent = 'No network places';
+      networkEl.appendChild(empty);
+    }
+
+    updateSidebarActive();
+  }
+
+  function updateSidebarActive() {
+    el.querySelectorAll('.files-sidebar-item').forEach(item => {
+      item.classList.toggle('active', item.dataset.path === currentPath);
+    });
+  }
+
+  // ── Add Place dialog ──
+  const addPlaceDlg = el.querySelector('#fs-add-place-dlg');
+  el.querySelector('#fs-place-cancel').addEventListener('click', () => addPlaceDlg.classList.add('hidden'));
+  el.querySelector('#fs-place-ok').addEventListener('click', () => {
+    const name = el.querySelector('#fs-place-name').value.trim();
+    const path = el.querySelector('#fs-place-path').value.trim();
+    if (name && path) {
+      slabConfig.places.push({ name, path, builtin: false });
+      saveConfig();
+      renderSidebar();
+    }
+    addPlaceDlg.classList.add('hidden');
   });
+
+  function openAddPlace() {
+    el.querySelector('#fs-place-name').value = '';
+    el.querySelector('#fs-place-path').value = currentPath;
+    addPlaceDlg.classList.remove('hidden');
+    el.querySelector('#fs-place-name').focus();
+  }
+
+  // ── Add Network dialog ──
+  const addNetDlg = el.querySelector('#fs-add-net-dlg');
+  el.querySelector('#fs-net-cancel').addEventListener('click', () => addNetDlg.classList.add('hidden'));
+  el.querySelector('#fs-net-ok').addEventListener('click', () => {
+    const name = el.querySelector('#fs-net-name').value.trim();
+    const host = el.querySelector('#fs-net-host').value.trim();
+    const proto = el.querySelector('#fs-net-proto').value;
+    const path = el.querySelector('#fs-net-path').value.trim() || '/';
+    const port = parseInt(el.querySelector('#fs-net-port').value) || null;
+    const username = el.querySelector('#fs-net-user').value.trim() || null;
+    const pinned = el.querySelector('#fs-net-pin').checked;
+    if (name && host) {
+      slabConfig.network.push({
+        id: Date.now().toString(36),
+        name, protocol: proto, host, port, path, username, pinned,
+      });
+      saveConfig();
+      renderSidebar();
+    }
+    addNetDlg.classList.add('hidden');
+  });
+
+  function openAddNetwork() {
+    el.querySelector('#fs-net-name').value = '';
+    el.querySelector('#fs-net-host').value = '';
+    el.querySelector('#fs-net-port').value = '';
+    el.querySelector('#fs-net-path').value = '/';
+    el.querySelector('#fs-net-user').value = '';
+    el.querySelector('#fs-net-pin').checked = true;
+    addNetDlg.classList.remove('hidden');
+    el.querySelector('#fs-net-name').focus();
+  }
+
+  // load config and init sidebar
+  loadConfig();
 
   // editable path bar — click to edit, enter to navigate, escape to cancel
   pathBar.addEventListener('click', (e) => {

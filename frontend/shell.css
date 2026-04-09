@@ -290,7 +290,14 @@
 }
 
 .files-sidebar-section {
-  margin-bottom: 12px;
+  margin-bottom: 8px;
+}
+
+.files-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 12px 4px 12px;
 }
 
 .files-sidebar-label {
@@ -298,7 +305,27 @@
   color: var(--gray-500);
   letter-spacing: .1em;
   text-transform: uppercase;
-  padding: 4px 12px;
+}
+
+.files-sidebar-add {
+  font-family: var(--font-mono);
+  font-size: .75rem;
+  font-weight: 700;
+  background: transparent;
+  color: var(--gray-500);
+  border: none;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color .1s, background .1s;
+}
+
+.files-sidebar-add:hover {
+  color: var(--white);
+  background: var(--gray-700);
 }
 
 .files-sidebar-item {
@@ -307,6 +334,17 @@
   cursor: pointer;
   transition: background .1s, color .1s;
   font-size: .7rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.files-sidebar-item-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .files-sidebar-item:hover {
@@ -318,6 +356,43 @@
   background: var(--gray-800);
   color: var(--white);
   border-left: 2px solid var(--red);
+}
+
+.files-sidebar-remove {
+  font-family: var(--font-mono);
+  font-size: .8rem;
+  background: transparent;
+  color: var(--gray-600);
+  border: none;
+  cursor: pointer;
+  padding: 0 2px;
+  display: none;
+  transition: color .1s;
+}
+
+.files-sidebar-item:hover .files-sidebar-remove {
+  display: block;
+}
+
+.files-sidebar-remove:hover {
+  color: var(--red);
+}
+
+.files-sidebar-proto {
+  font-size: .5rem;
+  font-weight: 700;
+  color: var(--gray-500);
+  background: var(--gray-800);
+  padding: 1px 4px;
+  letter-spacing: .04em;
+  flex-shrink: 0;
+}
+
+.files-sidebar-empty {
+  font-size: .6rem;
+  color: var(--gray-600);
+  padding: 4px 12px;
+  font-style: italic;
 }
 
 /* Main pane */
@@ -636,4 +711,118 @@
 .files-error {
   color: var(--red);
   padding: 1rem 8px;
+}
+
+/* ── Dialogs ── */
+
+.files-dialog {
+  position: absolute;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, .7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.files-dialog.hidden {
+  display: none;
+}
+
+.files-dialog-box {
+  background: var(--gray-900);
+  border: 1px solid var(--gray-700);
+  padding: 20px;
+  width: 320px;
+  max-height: 90%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.files-dialog-title {
+  font-family: var(--font-mono);
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--white);
+  margin-bottom: 4px;
+}
+
+.files-dialog-label {
+  font-family: var(--font-mono);
+  font-size: .6rem;
+  color: var(--gray-500);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.files-dialog-input {
+  font-family: var(--font-mono);
+  font-size: .75rem;
+  background: var(--gray-800);
+  border: 1px solid var(--gray-700);
+  color: var(--white);
+  padding: 6px 8px;
+  outline: none;
+  width: 100%;
+}
+
+.files-dialog-input:focus {
+  border-color: var(--red);
+}
+
+select.files-dialog-input {
+  cursor: pointer;
+}
+
+.files-dialog-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.files-dialog-row input[type="checkbox"] {
+  accent-color: var(--red);
+}
+
+.files-dialog-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+  justify-content: flex-end;
+}
+
+.files-dialog-btn {
+  font-family: var(--font-mono);
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border: none;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.files-dialog-cancel {
+  background: var(--gray-800);
+  color: var(--gray-300);
+}
+
+.files-dialog-cancel:hover {
+  background: var(--gray-700);
+}
+
+.files-dialog-ok {
+  background: var(--red);
+  color: var(--white);
+}
+
+.files-dialog-ok:hover {
+  background: #cc2b22;
 }
