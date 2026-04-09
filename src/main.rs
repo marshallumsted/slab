@@ -2,6 +2,7 @@ use axum::{Router, response::Json, routing::{get, post}};
 use serde_json::json;
 use tower_http::services::ServeDir;
 
+mod apps;
 mod config;
 mod files;
 mod media;
@@ -34,7 +35,10 @@ async fn main() {
         .route("/api/media/scan", get(media::scan_folders))
         .route("/api/media/list", get(media::list_media))
         .route("/api/sysmon", get(sysmon::get_stats))
-        .route("/api/terminal", get(terminal::ws_handler));
+        .route("/api/terminal", get(terminal::ws_handler))
+        .route("/api/apps", get(apps::list_apps))
+        .route("/api/apps/launch", post(apps::launch_app))
+        .route("/api/apps/icon", get(apps::serve_icon));
 
     let app = api.fallback_service(ServeDir::new("frontend"));
 

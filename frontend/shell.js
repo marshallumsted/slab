@@ -108,33 +108,120 @@ const apps = [
   },
 ];
 
-// ── Build Start Tiles ──
+// ── Build Start Screen ──
 
-apps.forEach(app => {
-  const tile = document.createElement('div');
-  tile.className = `slab-tile slab-tile--${app.color}`;
-  if (app.tile === 'wide') tile.style.gridColumn = 'span 2';
+function buildStartScreen() {
+  startGrid.innerHTML = '';
 
-  const label = document.createElement('div');
-  label.className = 'slab-label';
-  if (app.color === 'red') label.style.color = 'rgba(255,255,255,.6)';
-  label.textContent = 'app';
+  // slab built-in apps section
+  const slabSection = document.createElement('div');
+  slabSection.className = 'start-section';
+  const slabLabel = document.createElement('div');
+  slabLabel.className = 'start-section-label';
+  slabLabel.textContent = 'Slab';
+  slabSection.appendChild(slabLabel);
 
-  const title = document.createElement('div');
-  title.className = 'slab-tile-title';
-  if (app.color === 'white') title.style.color = 'var(--black)';
-  title.textContent = app.name;
+  const slabGrid = document.createElement('div');
+  slabGrid.className = 'start-section-grid';
 
-  tile.appendChild(label);
-  tile.appendChild(title);
+  apps.forEach(app => {
+    const tile = document.createElement('div');
+    tile.className = `slab-tile slab-tile--${app.color} start-tile`;
+    if (app.tile === 'wide') tile.style.gridColumn = 'span 2';
 
-  tile.addEventListener('click', () => {
-    app.launch();
-    closeStart();
+    const label = document.createElement('div');
+    label.className = 'slab-label';
+    if (app.color === 'red') label.style.color = 'rgba(255,255,255,.6)';
+    label.textContent = 'slab';
+
+    const title = document.createElement('div');
+    title.className = 'slab-tile-title';
+    if (app.color === 'white') title.style.color = 'var(--black)';
+    title.textContent = app.name;
+
+    tile.appendChild(label);
+    tile.appendChild(title);
+    tile.addEventListener('click', () => { app.launch(); closeStart(); });
+    slabGrid.appendChild(tile);
   });
 
-  startGrid.appendChild(tile);
-});
+  slabSection.appendChild(slabGrid);
+  startGrid.appendChild(slabSection);
+
+  // load system apps
+  fetch('/api/apps').then(r => r.json()).then(data => {
+    // group by primary category
+    const groups = {};
+    const categoryOrder = ['Internet', 'Development', 'Media', 'Graphics', 'Office', 'Games', 'System', 'Utilities', 'Education', 'Settings', 'Other'];
+
+    for (const app of data.apps) {
+      const cat = app.categories[0] || 'Other';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(app);
+    }
+
+    // render in order
+    const sortedCats = Object.keys(groups).sort((a, b) => {
+      const ai = categoryOrder.indexOf(a);
+      const bi = categoryOrder.indexOf(b);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    });
+
+    for (const cat of sortedCats) {
+      const section = document.createElement('div');
+      section.className = 'start-section';
+
+      const label = document.createElement('div');
+      label.className = 'start-section-label';
+      label.textContent = cat;
+      section.appendChild(label);
+
+      const grid = document.createElement('div');
+      grid.className = 'start-section-grid';
+
+      for (const app of groups[cat]) {
+        const tile = document.createElement('div');
+        tile.className = 'slab-tile start-tile start-tile--sys';
+
+        // icon
+        if (app.icon) {
+          const iconEl = document.createElement('img');
+          iconEl.className = 'start-tile-icon';
+          iconEl.src = `/api/apps/icon?name=${encodeURIComponent(app.icon)}&size=48`;
+          iconEl.alt = '';
+          iconEl.loading = 'lazy';
+          iconEl.onerror = function() { this.style.display = 'none'; };
+          tile.appendChild(iconEl);
+        }
+
+        const name = document.createElement('div');
+        name.className = 'start-tile-name';
+        name.textContent = app.name;
+        tile.appendChild(name);
+
+        if (app.comment) {
+          tile.title = app.comment;
+        }
+
+        tile.addEventListener('click', () => {
+          fetch('/api/apps/launch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ exec: app.exec }),
+          });
+          closeStart();
+        });
+
+        grid.appendChild(tile);
+      }
+
+      section.appendChild(grid);
+      startGrid.appendChild(section);
+    }
+  }).catch(() => {});
+}
+
+buildStartScreen();
 
 // ── Window Management ──
 
