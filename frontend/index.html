@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>slab</title>
+  <link rel="stylesheet" href="design.css">
+  <link rel="stylesheet" href="shell.css">
+</head>
+<body>
+
+  <!-- Desktop surface -->
+  <div id="desktop">
+    <!-- Windows get injected here -->
+  </div>
+
+  <!-- Floating taskbar -->
+  <div id="taskbar">
+    <button class="taskbar-start" id="start-btn">slab</button>
+    <div class="taskbar-divider"></div>
+    <div class="taskbar-apps" id="taskbar-apps">
+      <!-- App entries appear here -->
+    </div>
+    <div class="taskbar-divider"></div>
+    <div class="taskbar-tray" id="taskbar-tray">
+      <span class="taskbar-clock" id="taskbar-clock"></span>
+    </div>
+  </div>
+
+  <!-- Start screen overlay -->
+  <div id="start-screen" class="start-screen hidden">
+    <div class="start-grid" id="start-grid">
+      <!-- Tiles get injected here -->
+    </div>
+  </div>
+
+  <script src="shell.js"></script>
+</body>
+</html>
