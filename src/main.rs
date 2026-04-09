@@ -50,5 +50,9 @@ async fn get_user() -> Json<serde_json::Value> {
         .or_else(|_| std::env::var("LOGNAME"))
         .unwrap_or_else(|_| "user".into());
     let home = std::env::var("HOME").unwrap_or_else(|_| format!("/home/{user}"));
-    Json(json!({ "user": user, "home": home }))
+    let hostname = std::fs::read_to_string("/etc/hostname")
+        .unwrap_or_default()
+        .trim()
+        .to_string();
+    Json(json!({ "user": user, "home": home, "hostname": hostname }))
 }
