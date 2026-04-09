@@ -2231,7 +2231,7 @@ function buildSettingsContent() {
       if (sec.highlight) item.classList.add('settings-nav-highlight');
       if (sec.id === activeSection) item.classList.add('active');
       item.textContent = sec.label;
-      item.addEventListener('click', () => { activeSection = sec.id; renderNav(); renderSection(); });
+      item.addEventListener('click', () => { stopSetupPolling(); activeSection = sec.id; renderNav(); renderSection(); });
       nav.appendChild(item);
     }
   }
@@ -2331,6 +2331,9 @@ function buildSettingsContent() {
 
   // ── Section renderers ──
 
+  let setupPollInterval = null;
+  let lastSetupHash = '';
+
   async function renderSetup() {
     main.innerHTML = `
       <div class="settings-page-title">Setup</div>
@@ -2341,10 +2344,38 @@ function buildSettingsContent() {
     try {
       const res = await fetch('/api/setup');
       const data = await res.json();
+      lastSetupHash = setupHash(data);
       renderSetupData(data);
+      startSetupPolling();
     } catch {
       main.innerHTML += '<div style="color:var(--red);padding:8px 0;">Failed to load setup status</div>';
     }
+  }
+
+  function setupHash(data) {
+    return data.items.map(i => `${i.id}:${i.installed}`).join(',');
+  }
+
+  function startSetupPolling() {
+    stopSetupPolling();
+    setupPollInterval = setInterval(async () => {
+      if (activeSection !== 'setup') { stopSetupPolling(); return; }
+      try {
+        const res = await fetch('/api/setup');
+        const data = await res.json();
+        const hash = setupHash(data);
+        if (hash !== lastSetupHash) {
+          lastSetupHash = hash;
+          renderSetupData(data);
+          // also refresh xbridge status
+          fetch('/api/xbridge/status').then(r => r.json()).then(d => { xbridgeAvailable = d.available; }).catch(() => {});
+        }
+      } catch {}
+    }, 3000);
+  }
+
+  function stopSetupPolling() {
+    if (setupPollInterval) { clearInterval(setupPollInterval); setupPollInterval = null; }
   }
 
   function renderSetupData(data) {
