@@ -378,26 +378,188 @@ function buildTerminalContent() {
 }
 
 function buildSysmonContent() {
-  return `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;">
-      <div class="slab-tile slab-tile--red" style="padding:1rem;">
-        <div class="slab-tile-subtitle">CPU</div>
-        <div class="slab-tile-value">--%</div>
-      </div>
-      <div class="slab-tile" style="padding:1rem;">
-        <div class="slab-tile-subtitle">Memory</div>
-        <div class="slab-tile-value">--</div>
-      </div>
-      <div class="slab-tile" style="padding:1rem;">
-        <div class="slab-tile-subtitle">Disk</div>
-        <div class="slab-tile-value">--</div>
-      </div>
-      <div class="slab-tile" style="padding:1rem;">
-        <div class="slab-tile-subtitle">Uptime</div>
-        <div class="slab-tile-value">--</div>
-      </div>
-    </div>
+  const el = document.createElement('div');
+  el.className = 'sysmon-app';
+  el.innerHTML = `
+    <div class="sysmon-grid" id="sysmon-grid"></div>
   `;
+
+  const grid = el.querySelector('#sysmon-grid');
+  let interval = null;
+
+  async function poll() {
+    try {
+      const res = await fetch('/api/sysmon');
+      const s = await res.json();
+      render(s);
+    } catch {
+      grid.innerHTML = '<div style="color:var(--gray-500);padding:1rem;">failed to load</div>';
+    }
+  }
+
+  function render(s) {
+    grid.innerHTML = '';
+
+    // row 1: headline tiles
+    grid.appendChild(tile('CPU', `${s.cpu.usage_total.toFixed(0)}%`, s.cpu.model, 'red'));
+    grid.appendChild(tile('Memory', `${s.memory.used_mb} / ${s.memory.total_mb} MB`, `${s.memory.percent.toFixed(0)}% used`, 'gray'));
+    grid.appendChild(tile('Uptime', formatUptime(s.uptime), `Load: ${s.load.map(v => v.toFixed(2)).join('  ')}`, 'gray'));
+    grid.appendChild(tile('Processes', `${s.processes}`, s.hostname, 'gray'));
+
+    // CPU cores
+    if (s.cpu.usage_per_core.length > 0) {
+      const section = document.createElement('div');
+      section.className = 'sysmon-section';
+      section.innerHTML = '<div class="sysmon-section-title">CPU Cores</div>';
+      const bars = document.createElement('div');
+      bars.className = 'sysmon-cores';
+      s.cpu.usage_per_core.forEach((pct, i) => {
+        const bar = document.createElement('div');
+        bar.className = 'sysmon-core';
+        bar.innerHTML = `
+          <div class="sysmon-core-label">${i}</div>
+          <div class="sysmon-bar"><div class="sysmon-bar-fill" style="width:${pct.toFixed(0)}%"></div></div>
+          <div class="sysmon-core-pct">${pct.toFixed(0)}%</div>
+        `;
+        bars.appendChild(bar);
+      });
+      section.appendChild(bars);
+      grid.appendChild(section);
+    }
+
+    // Temperatures
+    if (s.temps.length > 0) {
+      const section = document.createElement('div');
+      section.className = 'sysmon-section';
+      section.innerHTML = '<div class="sysmon-section-title">Temperatures</div>';
+      const list = document.createElement('div');
+      list.className = 'sysmon-temp-list';
+      s.temps.forEach(t => {
+        const row = document.createElement('div');
+        row.className = 'sysmon-temp-row';
+        const tempClass = t.temp_c > 80 ? 'sysmon-temp--hot' : t.temp_c > 60 ? 'sysmon-temp--warm' : '';
+        row.innerHTML = `
+          <span class="sysmon-temp-label">${t.label}</span>
+          <span class="sysmon-temp-val ${tempClass}">${t.temp_c.toFixed(0)}&deg;C</span>
+        `;
+        list.appendChild(row);
+      });
+      section.appendChild(list);
+      grid.appendChild(section);
+    }
+
+    // Disks
+    if (s.disk.length > 0) {
+      const section = document.createElement('div');
+      section.className = 'sysmon-section';
+      section.innerHTML = '<div class="sysmon-section-title">Disks</div>';
+      s.disk.forEach(d => {
+        const row = document.createElement('div');
+        row.className = 'sysmon-disk';
+        row.innerHTML = `
+          <div class="sysmon-disk-header">
+            <span>${d.mount}</span>
+            <span class="sysmon-disk-detail">${d.used_gb.toFixed(1)} / ${d.total_gb.toFixed(1)} GB</span>
+          </div>
+          <div class="sysmon-bar"><div class="sysmon-bar-fill ${d.percent > 90 ? 'sysmon-bar--danger' : ''}" style="width:${d.percent.toFixed(0)}%"></div></div>
+        `;
+        section.appendChild(row);
+      });
+      grid.appendChild(section);
+    }
+
+    // Network
+    if (s.network.length > 0) {
+      const section = document.createElement('div');
+      section.className = 'sysmon-section';
+      section.innerHTML = '<div class="sysmon-section-title">Network</div>';
+      const netGrid = document.createElement('div');
+      netGrid.className = 'sysmon-net-grid';
+      s.network.forEach(n => {
+        const card = document.createElement('div');
+        card.className = 'sysmon-net-card';
+        card.innerHTML = `
+          <div class="sysmon-net-iface">${n.interface}</div>
+          <div class="sysmon-net-row"><span>RX</span><span>${formatBytes(n.rx_bytes)}</span></div>
+          <div class="sysmon-net-row"><span>TX</span><span>${formatBytes(n.tx_bytes)}</span></div>
+        `;
+        netGrid.appendChild(card);
+      });
+      section.appendChild(netGrid);
+      grid.appendChild(section);
+    }
+
+    // Swap
+    if (s.swap.total_mb > 0) {
+      const section = document.createElement('div');
+      section.className = 'sysmon-section';
+      section.innerHTML = '<div class="sysmon-section-title">Swap</div>';
+      const row = document.createElement('div');
+      row.className = 'sysmon-disk';
+      row.innerHTML = `
+        <div class="sysmon-disk-header">
+          <span>Swap</span>
+          <span class="sysmon-disk-detail">${s.swap.used_mb} / ${s.swap.total_mb} MB</span>
+        </div>
+        <div class="sysmon-bar"><div class="sysmon-bar-fill" style="width:${s.swap.percent.toFixed(0)}%"></div></div>
+      `;
+      section.appendChild(row);
+      grid.appendChild(section);
+    }
+
+    // Kernel
+    const section = document.createElement('div');
+    section.className = 'sysmon-section';
+    section.innerHTML = `
+      <div class="sysmon-section-title">System</div>
+      <div class="sysmon-sys-row"><span>Kernel</span><span>${s.kernel}</span></div>
+      <div class="sysmon-sys-row"><span>Hostname</span><span>${s.hostname}</span></div>
+      <div class="sysmon-sys-row"><span>CPU Freq</span><span>${s.cpu.freq_mhz.toFixed(0)} MHz</span></div>
+    `;
+    grid.appendChild(section);
+  }
+
+  function tile(label, value, sub, color) {
+    const t = document.createElement('div');
+    t.className = `slab-tile slab-tile--${color} sysmon-tile`;
+    t.innerHTML = `
+      <div class="slab-tile-subtitle">${label}</div>
+      <div class="slab-tile-value">${value}</div>
+      <div class="sysmon-tile-sub">${sub}</div>
+    `;
+    return t;
+  }
+
+  function formatUptime(seconds) {
+    const d = Math.floor(seconds / 86400);
+    const h = Math.floor((seconds % 86400) / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (d > 0) return `${d}d ${h}h`;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  }
+
+  function formatBytes(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+    if (b < 1024 * 1024 * 1024) return (b / (1024 * 1024)).toFixed(1) + ' MB';
+    return (b / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+  }
+
+  // poll every 2 seconds
+  poll();
+  interval = setInterval(poll, 2000);
+
+  // cleanup when window closes — use MutationObserver
+  const observer = new MutationObserver(() => {
+    if (!document.contains(el)) {
+      clearInterval(interval);
+      observer.disconnect();
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  return el;
 }
 
 function buildFilesContent() {

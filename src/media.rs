@@ -48,8 +48,8 @@ pub async fn scan_folders(Query(params): Query<ScanParams>) -> Json<ScanResult> 
     let mut folders = Vec::new();
     scan_recursive(&root, 0, max_depth, &mut folders);
 
-    // sort by path
-    folders.sort_by(|a, b| a.path.cmp(&b.path));
+    // sort alphabetically by name
+    folders.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
 
     Json(ScanResult { folders })
 }

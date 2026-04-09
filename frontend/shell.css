@@ -897,6 +897,192 @@ select.files-dialog-input {
   margin: 4px 0;
 }
 
+/* ── System Monitor ── */
+
+.sysmon-app {
+  font-family: var(--font-mono);
+  font-size: .75rem;
+  height: 100%;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-700) transparent;
+}
+
+.sysmon-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap);
+  padding: 0;
+}
+
+.sysmon-tile {
+  padding: 1rem;
+}
+
+.sysmon-tile-sub {
+  font-family: var(--font-mono);
+  font-size: .55rem;
+  color: var(--gray-500);
+  margin-top: .2rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slab-tile--red .sysmon-tile-sub {
+  color: rgba(255,255,255,.5);
+}
+
+/* Sections */
+.sysmon-section {
+  grid-column: 1 / -1;
+  padding: 12px;
+  background: var(--gray-900);
+}
+
+.sysmon-section-title {
+  font-size: .6rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 8px;
+}
+
+/* CPU core bars */
+.sysmon-cores {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sysmon-core {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sysmon-core-label {
+  font-size: .55rem;
+  color: var(--gray-500);
+  width: 16px;
+  text-align: right;
+}
+
+.sysmon-core-pct {
+  font-size: .55rem;
+  color: var(--gray-500);
+  width: 32px;
+  text-align: right;
+}
+
+/* Generic bar */
+.sysmon-bar {
+  flex: 1;
+  height: 8px;
+  background: var(--gray-800);
+  overflow: hidden;
+}
+
+.sysmon-bar-fill {
+  height: 100%;
+  background: var(--red);
+  transition: width .3s ease;
+}
+
+.sysmon-bar--danger {
+  background: #ff4444;
+}
+
+/* Temperatures */
+.sysmon-temp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sysmon-temp-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+
+.sysmon-temp-label {
+  font-size: .65rem;
+  color: var(--gray-300);
+}
+
+.sysmon-temp-val {
+  font-size: .65rem;
+  font-weight: 700;
+  color: var(--white);
+}
+
+.sysmon-temp--warm {
+  color: #f0a030;
+}
+
+.sysmon-temp--hot {
+  color: var(--red);
+}
+
+/* Disks */
+.sysmon-disk {
+  margin-bottom: 8px;
+}
+
+.sysmon-disk-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: .65rem;
+  color: var(--gray-300);
+  margin-bottom: 4px;
+}
+
+.sysmon-disk-detail {
+  color: var(--gray-500);
+}
+
+/* Network */
+.sysmon-net-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--gap);
+}
+
+.sysmon-net-card {
+  background: var(--gray-800);
+  padding: 8px 10px;
+}
+
+.sysmon-net-iface {
+  font-size: .65rem;
+  font-weight: 700;
+  color: var(--white);
+  margin-bottom: 4px;
+}
+
+.sysmon-net-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: .55rem;
+  color: var(--gray-500);
+  padding: 1px 0;
+}
+
+/* System info rows */
+.sysmon-sys-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: .65rem;
+  color: var(--gray-300);
+  padding: 3px 0;
+}
+
+.sysmon-sys-row span:first-child {
+  color: var(--gray-500);
+}
+
 /* ── Media Viewer ── */
 
 .media-app {
