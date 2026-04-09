@@ -1,0 +1,9 @@
+{
+  "id": "settings",
+  "name": "Settings",
+  "order": 8,
+  "tile": { "color": "red", "size": "normal" },
+  "window": { "width": 550, "height": 500 },
+  "scripts": ["settings.js"],
+  "dependencies": []
+}

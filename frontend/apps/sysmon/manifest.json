@@ -1,0 +1,9 @@
+{
+  "id": "sysmon",
+  "name": "System",
+  "order": 2,
+  "tile": { "color": "red", "size": "wide" },
+  "window": { "width": 600, "height": 400 },
+  "scripts": ["sysmon.js"],
+  "dependencies": []
+}

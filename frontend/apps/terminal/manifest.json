@@ -1,0 +1,17 @@
+{
+  "id": "terminal",
+  "name": "Terminal",
+  "order": 1,
+  "tile": { "color": "gray", "size": "wide" },
+  "window": { "width": 700, "height": 450 },
+  "scripts": ["terminal.js"],
+  "dependencies": ["xterm"],
+  "spawn": [
+    {
+      "id": "terminal",
+      "label": "Terminal",
+      "icon": "<svg viewBox='0 0 16 16' width='14' height='14'><polyline points='4,4 8,8 4,12' fill='none' stroke='currentColor' stroke-width='1.5'/><line x1='9' y1='12' x2='13' y2='12' stroke='currentColor' stroke-width='1.5'/></svg>"
+    }
+  ],
+  "capabilities": ["openTerminalWithCommand"]
+}

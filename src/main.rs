@@ -7,6 +7,7 @@ mod config;
 mod files;
 mod media;
 mod setup;
+mod shell;
 mod sysmon;
 mod terminal;
 mod xbridge;
@@ -46,7 +47,8 @@ async fn main() {
         .route("/api/xbridge/status", get(xbridge::status))
         .route("/api/xbridge/launch", post(xbridge::launch))
         .route("/api/xbridge/stop", post(xbridge::stop))
-        .route("/api/xbridge/proxy/{port}/{*path}", get(xbridge::proxy));
+        .route("/api/xbridge/proxy/{port}/{*path}", get(xbridge::proxy))
+        .route("/api/shell/apps", get(shell::list_frontend_apps));
 
     let app = api.fallback_service(ServeDir::new("frontend"));
 

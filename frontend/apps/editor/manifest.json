@@ -1,0 +1,10 @@
+{
+  "id": "editor",
+  "name": "Editor",
+  "order": 4,
+  "tile": { "color": "white", "size": "normal" },
+  "window": { "width": 800, "height": 550 },
+  "scripts": ["editor.js"],
+  "dependencies": ["monaco", "marked"],
+  "capabilities": ["openFileInEditor"]
+}

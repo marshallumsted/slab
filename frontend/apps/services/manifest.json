@@ -1,0 +1,9 @@
+{
+  "id": "services",
+  "name": "Services",
+  "order": 5,
+  "tile": { "color": "gray", "size": "normal" },
+  "window": { "width": 550, "height": 400 },
+  "scripts": ["services.js"],
+  "dependencies": []
+}

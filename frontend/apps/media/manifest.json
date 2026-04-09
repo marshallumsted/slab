@@ -1,0 +1,10 @@
+{
+  "id": "media",
+  "name": "Media",
+  "order": 7,
+  "tile": { "color": "white", "size": "wide" },
+  "window": { "width": 900, "height": 600 },
+  "scripts": ["media.js"],
+  "dependencies": [],
+  "capabilities": ["openMediaViewer"]
+}

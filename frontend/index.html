@@ -9,37 +9,47 @@
 </head>
 <body>
 
-  <!-- Desktop surface -->
+  <!-- Tile grid (desktop surface) -->
+  <div id="tile-grid">
+    <div class="tile-grid-inner" id="tile-grid-inner">
+      <!-- Live tiles get injected here -->
+    </div>
+  </div>
+
+  <!-- Desktop surface (windows layer) -->
   <div id="desktop">
     <!-- Windows get injected here -->
   </div>
 
-  <!-- Floating taskbar -->
+  <!-- Taskbar (toolbar) -->
   <div id="taskbar">
-    <button class="taskbar-start" id="start-btn">[S]</button>
-    <div class="taskbar-divider"></div>
-    <div class="taskbar-apps" id="taskbar-apps">
-      <!-- App entries appear here -->
+    <div class="taskbar-left" id="taskbar-apps">
+      <!-- Open apps and workflow tabs appear here -->
     </div>
-    <div class="taskbar-divider"></div>
-    <div class="taskbar-tray" id="taskbar-tray">
+    <div class="taskbar-right">
+      <div class="taskbar-spawn" id="taskbar-spawn">
+        <!-- Spawn buttons built dynamically from app manifests -->
+      </div>
+      <div class="taskbar-divider"></div>
+      <button class="taskbar-settings-btn" id="taskbar-settings" title="Settings">
+        <svg viewBox="0 0 16 16" width="14" height="14"><circle cx="8" cy="8" r="2.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8,1.5 L8,3.5 M8,12.5 L8,14.5 M1.5,8 L3.5,8 M12.5,8 L14.5,8 M3.3,3.3 L4.7,4.7 M11.3,11.3 L12.7,12.7 M3.3,12.7 L4.7,11.3 M11.3,4.7 L12.7,3.3" stroke="currentColor" stroke-width="1.2"/></svg>
+      </button>
+      <div class="taskbar-divider"></div>
       <span class="taskbar-clock" id="taskbar-clock"></span>
     </div>
   </div>
 
-  <!-- Start screen overlay -->
-  <div id="start-screen" class="start-screen hidden">
-    <div class="start-grid" id="start-grid">
-      <!-- Tiles get injected here -->
+  <!-- Settings popup -->
+  <div id="settings-popup" class="settings-popup hidden">
+    <div class="settings-popup-inner">
+      <div class="settings-popup-title">Quick Settings</div>
+      <div class="settings-popup-grid" id="settings-popup-grid">
+        <!-- Quick settings tiles injected here -->
+      </div>
     </div>
   </div>
 
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-web-links@0.11.0/lib/addon-web-links.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/lib/marked.umd.min.js"></script>
+  <!-- Dependencies loaded dynamically based on installed apps -->
   <script src="shell.js"></script>
 </body>
 </html>

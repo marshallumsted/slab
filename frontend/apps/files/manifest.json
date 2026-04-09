@@ -1,0 +1,16 @@
+{
+  "id": "files",
+  "name": "Files",
+  "order": 3,
+  "tile": { "color": "gray", "size": "normal" },
+  "window": { "width": 800, "height": 500 },
+  "scripts": ["files.js"],
+  "dependencies": [],
+  "spawn": [
+    {
+      "id": "files",
+      "label": "File Browser",
+      "icon": "<svg viewBox='0 0 16 16' width='14' height='14'><path d='M2,4 L2,13 L14,13 L14,5 L8,5 L7,4 Z' fill='none' stroke='currentColor' stroke-width='1.5'/></svg>"
+    }
+  ]
+}

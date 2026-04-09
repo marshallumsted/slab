@@ -114,17 +114,18 @@ These aren't workspace-specific. They're desk tools — the stuff that's always 
 
 **Taskbar Layout**
 
-The taskbar is a toolbar — not an app dock, not a system tray. Every element is a tool you use constantly:
+**Two bars:**
 
-- **Left:** Open apps and workflow tabs
-- **Right:** Quick Spawn (sticky notes, terminal, file browser, bookmark, timer, media controls) → Settings button (popup panel: volume, Wi-Fi, brightness) → Clock
+- **Top bar:** Menu bar with contextual app settings, system menus. When an app is focused, its declared settings appear here automatically. The desktop renders them — apps just provide data. Also holds system-level items (clock, notifications).
+- **Bottom bar (taskbar):** The toolbar. Left = open apps and workflow tabs. Right = Quick Spawn tools → Clock.
 
-The taskbar is fully user-customizable:
-- **Tools:** Add, remove, reorder quick spawn items. Drop what you don't use, add what you do.
+The top bar is for information and configuration. The bottom bar is for actions and switching.
+
+The bottom taskbar is fully user-customizable:
+- **Tools:** Add, remove, reorder quick spawn items.
 - **Layout:** Top, bottom, left, or right edge. Horizontal or vertical.
 - **Visibility:** Always visible, auto-hide, or hidden (keyboard shortcut to reveal).
-- **Functionality:** Choose what the taskbar does — show quick spawn tools, show open apps, show both, or minimal (clock + settings only). Scale it to how much you rely on it.
-- **Per-workflow tools:** Each workflow can override which quick spawn tools are visible. Coding mode shows terminal and file browser spawns. School mode shows sticky notes and timer. The toolbar adapts to the task.
+- **Per-workflow tools:** Each workflow can override which quick spawn tools are visible. Coding mode shows terminal and file browser spawns. School mode shows sticky notes and timer.
 
 Data displays (CPU, RAM, disk, network, service status) belong on the tile grid as live Metro tiles — not crammed into the taskbar. The taskbar is for actions. The tiles are for information.
 
@@ -148,33 +149,63 @@ First launch: "Set up a workspace" (guided — pick purpose, scope folders, pin 
 
 ## Architecture
 
+### App Architecture
+
+**Apps are web components.** Each app is a custom element (`<slab-terminal>`, `<slab-files>`, `<slab-sysmon>`) with self-contained HTML, CSS, and JS. Shadow DOM provides CSS isolation. The shell drops components into windows, tiles, or workflow layouts without knowing anything about the app's internals.
+
+```
+frontend/apps/
+  terminal/
+    manifest.json       # metadata: name, tile config, spawn entries, dependencies
+    terminal.js         # defines <slab-terminal> custom element
+  sysmon/
+    manifest.json
+    sysmon.js           # defines <slab-sysmon> custom element
+  files/
+    manifest.json
+    files.js            # defines <slab-files> custom element
+  ...
+```
+
+**Adding an app = dropping a folder. Removing = deleting it.** The shell discovers apps via `GET /api/shell/apps` (backend scans `frontend/apps/*/manifest.json`). If every app is deleted, the desktop still works — empty tile grid, empty taskbar, clock ticking.
+
+**Design tokens live in the desktop.** `design.css` defines CSS custom properties (`--red`, `--gray-800`, `--font-mono`, etc.). These pass through shadow DOM boundaries, so apps use `var(--red)` and inherit the theme automatically. Apps never define their own colors or fonts — they consume the desktop's design language.
+
+**Apps expose data, not just UI.** Each app component exposes a `getData()` method that returns its current state. This is the single source of truth:
+
+- The **live tile** calls `getData()` to render a summary (CPU %, file count, service status)
+- The **full app window** renders the complete UI from the same data
+- **Other apps** can query any app's data via `Slab.query('sysmon')` to pull from it
+- **Workflow tile elements** render a slim view of the same data
+
+The data layer means the System Monitor tile, the System Monitor window, and a workflow element showing CPU in a corner all read from the same place.
+
+**Cross-app communication** uses a capability system. Apps register capabilities (`openTerminalWithCommand`, `openFileInEditor`) and other apps request them through the shell: `Slab.request('openTerminalWithCommand', cmd)`. If the providing app isn't installed, the request returns undefined — nothing breaks.
+
 ### Three-Tier Application Model
 
-**Tier 1 — Native slab apps**
-Built-in apps written in web tech. Fast, lightweight, zero streaming overhead.
-
-- Terminal (real shell via websocket)
-- File manager (sidebar, grid/list views, image/video previews, network places)
-- System monitor (CPU, RAM, disk, network)
-- Service manager (systemd via D-Bus)
-- Log viewer (journalctl stream)
-- Text editor (syntax highlighting)
-- Notes (per-workspace scratchpad, plain text storage)
-- Settings (centralized — all app + system config)
+**Tier 1 — Native slab apps (web components)**
+Custom elements in `frontend/apps/`. Self-contained, fast, zero streaming overhead. Each registers with the shell on load.
 
 **Tier 2 — Web apps as windows**
-Any URL pinned as a standalone app. Iframe-based, sandboxed. No address bar, no tabs — each gets its own slab window, taskbar entry, and start screen tile.
+Any URL pinned as a standalone app. Iframe-based, sandboxed. No address bar, no tabs — each gets its own slab window and tile.
 
 **Tier 3 — X11 bridge**
 Real native Linux GUI apps streamed into slab windows via Xpra. Per-window forwarding, keyboard/mouse/clipboard/audio forwarding.
 
 ### Shell
 
+The shell is the host. It owns:
+
 - **Window manager** — drag, resize, minimize, maximize, snap to edges/halves
-- **Taskbar** — floating, centered, red, auto-sizes by open apps, [S] logo
-- **Start screen** — Metro tile grid, live data tiles, app launchers
+- **Taskbar** — toolbar with open apps, dynamic spawn buttons (from app manifests), settings popup, clock
+- **Tile grid** — live data tiles, always-visible desktop surface, built from app manifests
+- **App loader** — discovers apps, loads scripts/styles, manages registration
+- **Slab API** (`window.Slab`) — register, createWindow, query data, request capabilities, event bus
 - **Right-click context menus** — system right-click suppressed globally
 - **Drag and drop** — files, windows, between panes (planned)
+
+No app code lives in the shell. The shell has zero knowledge of what apps exist.
 
 ### User Data Model
 
@@ -230,13 +261,27 @@ A lightweight per-workspace scratchpad. Not a full document editor — just fast
 
 ### Settings Philosophy
 
-All settings centralized in the Settings app (iPhone model):
+macOS menu bar approach — the desktop owns the settings UI, apps just declare data.
 
-- **Slab:** General (theme), Performance (animations, dot grid, blur)
-- **Apps:** Files, Terminal, Editor, System Monitor, Services, Log Viewer — each app has its own section
-- **System:** Network, About
+**App settings live in the desktop menu, not a settings app.** When an app is focused, its settings appear in the desktop's menu bar automatically. The app declares settings as data in its manifest:
 
-No app has its own settings UI. Quick controls (like view toggle in Files) stay in-app, but configuration lives in Settings.
+```json
+"settings": [
+  { "key": "font_size", "name": "Font Size", "type": "select", "default": "14",
+    "options": [["12","12px"],["14","14px"],["16","16px"]] },
+  { "key": "bold_is_bright", "name": "Bold is Bright", "type": "toggle", "default": true }
+]
+```
+
+The desktop renders consistent toggles, dropdowns, and labels — same look everywhere. Apps never build settings UI. Focus Terminal → terminal settings appear. Focus Files → file browser settings appear. No app focused → system settings only.
+
+**The Settings app handles system-level only:**
+- Theme (dark/light)
+- Performance (animations, dot grid, blur)
+- Setup (dependencies, install)
+- Network, About
+
+Per-app settings sections are gone — the menu bar handles them contextually.
 
 ### Multi-User (Planned)
 

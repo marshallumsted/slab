@@ -1,50 +1,177 @@
-/* ── Desktop ── */
+/* ── Tile Grid (Desktop Surface) ── */
+
+#tile-grid {
+  position: fixed;
+  inset: 0;
+  bottom: 56px;
+  z-index: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 24px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-700) transparent;
+}
+
+.tile-grid-inner {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--gap);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Live tile variants */
+.live-tile {
+  background: var(--gray-700);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  cursor: pointer;
+  transition: background .2s;
+  min-height: 100px;
+  position: relative;
+}
+
+.live-tile:hover { background: var(--gray-600); }
+.live-tile--red { background: var(--red); }
+.live-tile--red:hover { background: var(--red-hover); }
+.live-tile--white { background: var(--gray-200); color: var(--black); }
+.live-tile--white:hover { background: var(--white); }
+
+.live-tile--wide { grid-column: span 2; }
+.live-tile--tall { grid-row: span 2; }
+.live-tile--large { grid-column: span 2; grid-row: span 2; }
+
+.live-tile-label {
+  font-family: var(--font-mono);
+  font-size: .55rem;
+  color: rgba(255,255,255,.5);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.live-tile--white .live-tile-label { color: var(--gray-500); }
+
+.live-tile-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.live-tile-value {
+  font-family: var(--font-mono);
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: -.03em;
+  line-height: 1;
+  margin-top: 4px;
+}
+
+.live-tile-subtitle {
+  font-family: var(--font-mono);
+  font-size: .6rem;
+  color: rgba(255,255,255,.5);
+  letter-spacing: .04em;
+  margin-top: 4px;
+}
+
+.live-tile--white .live-tile-subtitle { color: var(--gray-500); }
+
+/* Live tile data rows */
+.live-tile-data {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 6px;
+}
+
+.live-tile-row {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: .55rem;
+  color: rgba(255,255,255,.6);
+}
+
+.live-tile--white .live-tile-row { color: var(--gray-500); }
+
+/* Tile running indicator */
+.live-tile.running {
+  border-left: 3px solid var(--red);
+}
+
+.live-tile--red.running {
+  border-left: 3px solid #fff;
+}
+
+/* Tile section headers */
+.tile-section-label {
+  font-family: var(--font-mono);
+  font-size: .6rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 6px;
+  padding-left: 2px;
+  grid-column: 1 / -1;
+}
+
+/* ── Desktop (windows layer) ── */
 
 #desktop {
   position: fixed;
   inset: 0;
+  bottom: 56px;
   z-index: 1;
+  pointer-events: none;
   touch-action: none;
 }
 
-/* ── Taskbar ── */
+#desktop .slab-window {
+  pointer-events: auto;
+}
+
+/* ── Taskbar (toolbar) ── */
 
 #taskbar {
   position: fixed;
-  bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 0;
+  left: 0;
+  right: 0;
   z-index: 1000;
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 0;
+  justify-content: space-between;
   height: 44px;
   background: var(--red);
   padding: 0 4px;
 }
 
-/* Start button */
-.taskbar-start {
-  font-family: var(--font-mono);
-  font-size: .7rem;
-  font-weight: 700;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  color: #fff;
-  background: transparent;
-  border: none;
-  padding: 0 12px;
-  height: 36px;
-  cursor: pointer;
-  transition: background .15s, color .15s;
+/* Left: open apps */
+.taskbar-left {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0 4px;
+  height: 100%;
 }
 
-.taskbar-start:hover {
-  background: var(--taskbar-overlay);
-}
+.taskbar-left::-webkit-scrollbar { display: none; }
 
-.taskbar-start.active {
-  background: var(--taskbar-overlay);
+/* Right: spawn tools + settings + clock */
+.taskbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+  height: 100%;
 }
 
 /* Divider between sections */
@@ -53,16 +180,10 @@
   height: 20px;
   background: var(--taskbar-overlay);
   flex-shrink: 0;
+  margin: 0 2px;
 }
 
-/* App entries area */
-.taskbar-apps {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 0 4px;
-}
-
+/* App entries */
 .taskbar-app {
   font-family: var(--font-mono);
   font-size: .65rem;
@@ -105,19 +226,135 @@
   flex-shrink: 0;
 }
 
-/* Tray area */
-.taskbar-tray {
+/* Quick Spawn buttons */
+.taskbar-spawn {
   display: flex;
   align-items: center;
-  padding: 0 8px;
+  gap: 0;
+  height: 100%;
 }
 
+.taskbar-spawn-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,.7);
+  width: 36px;
+  height: 100%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, color .15s;
+}
+
+.taskbar-spawn-btn:hover {
+  background: var(--taskbar-overlay);
+  color: #fff;
+}
+
+/* Settings button */
+.taskbar-settings-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,.7);
+  width: 36px;
+  height: 100%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, color .15s;
+}
+
+.taskbar-settings-btn:hover {
+  background: var(--taskbar-overlay);
+  color: #fff;
+}
+
+/* Clock */
 .taskbar-clock {
   font-family: var(--font-mono);
   font-size: .65rem;
   font-weight: 700;
   color: #fff;
   letter-spacing: .04em;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+/* ── Settings Popup ── */
+
+.settings-popup {
+  position: fixed;
+  bottom: 52px;
+  right: 8px;
+  z-index: 1001;
+  background: var(--gray-900);
+  border: 1px solid var(--gray-700);
+  width: 280px;
+  max-height: 400px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-700) transparent;
+}
+
+.settings-popup.hidden { display: none; }
+
+.settings-popup-inner {
+  padding: 12px;
+}
+
+.settings-popup-title {
+  font-family: var(--font-mono);
+  font-size: .6rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 10px;
+}
+
+.settings-popup-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap);
+}
+
+.settings-popup-tile {
+  background: var(--gray-800);
+  padding: 10px;
+  cursor: pointer;
+  transition: background .15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-popup-tile:hover {
+  background: var(--gray-700);
+}
+
+.settings-popup-tile.active {
+  background: var(--red);
+}
+
+.settings-popup-tile-icon {
+  font-size: 1rem;
+  color: var(--white);
+}
+
+.settings-popup-tile-label {
+  font-family: var(--font-mono);
+  font-size: .5rem;
+  color: var(--gray-300);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.settings-popup-tile.active .settings-popup-tile-label {
+  color: rgba(255,255,255,.8);
 }
 
 /* ── Windows ── */
@@ -142,7 +379,7 @@
   top: 0 !important;
   left: 0 !important;
   width: 100vw !important;
-  height: calc(100vh - 68px) !important;
+  height: calc(100vh - 44px) !important;
 }
 
 /* Title bar */
@@ -246,71 +483,9 @@
   cursor: nwse-resize;
 }
 
-/* ── Start Screen ── */
+/* ── System App Tiles (in tile grid, for X11 apps) ── */
 
-.start-screen {
-  position: fixed;
-  inset: 0;
-  bottom: 68px;
-  z-index: 500;
-  background: var(--overlay-heavy);
-  backdrop-filter: blur(20px);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 2rem 3rem;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--gray-700) transparent;
-}
-
-.start-screen.hidden {
-  display: none;
-}
-
-.start-screen {
-  touch-action: pan-y;
-  -webkit-overflow-scrolling: touch;
-}
-
-.start-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  width: 100%;
-  max-width: 900px;
-}
-
-/* Section */
-.start-section {
-  width: 100%;
-}
-
-.start-section-label {
-  font-family: var(--font-mono);
-  font-size: .6rem;
-  font-weight: 700;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  color: var(--red);
-  margin-bottom: 6px;
-  padding-left: 2px;
-}
-
-.start-section-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: var(--gap);
-}
-
-/* Slab built-in tiles keep their original style */
-.start-tile {
-  padding: 1rem;
-  min-height: 80px;
-}
-
-/* System app tiles */
-.start-tile--sys {
+.sys-app-tile {
   background: var(--gray-800);
   padding: 10px;
   display: flex;
@@ -323,18 +498,18 @@
   transition: background .15s;
 }
 
-.start-tile--sys:hover {
+.sys-app-tile:hover {
   background: var(--gray-700);
 }
 
-.start-tile-icon {
+.sys-app-tile-icon {
   width: 36px;
   height: 36px;
   object-fit: contain;
   flex-shrink: 0;
 }
 
-.start-tile-name {
+.sys-app-tile-name {
   font-family: var(--font-mono);
   font-size: .55rem;
   color: var(--gray-300);
@@ -2284,7 +2459,7 @@ body.no-dot-grid::before {
   display: none;
 }
 
-body.no-blur .start-screen {
+body.no-blur .settings-popup {
   backdrop-filter: none;
 }
 
@@ -2298,27 +2473,23 @@ body.no-animations *::after {
 /* ── Mobile ── */
 
 @media (max-width: 768px) {
-  /* Taskbar: full width at bottom */
   #taskbar {
-    left: 0;
-    right: 0;
-    bottom: 0;
-    transform: none;
-    width: 100%;
     height: 48px;
-    justify-content: space-between;
-    padding: 0 2px;
   }
 
-  .taskbar-apps {
-    flex: 1;
-    overflow-x: auto;
-    scrollbar-width: none;
+  #tile-grid {
+    bottom: 48px;
+    padding: 12px;
   }
 
-  .taskbar-apps::-webkit-scrollbar { display: none; }
+  #desktop {
+    bottom: 48px;
+  }
 
-  /* Windows: fill screen on mobile */
+  .tile-grid-inner {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+
   .slab-window {
     min-width: 0 !important;
     min-height: 0 !important;
@@ -2328,27 +2499,15 @@ body.no-animations *::after {
     height: calc(100vh - 48px) !important;
   }
 
-  /* Hide resize handle on mobile */
   .window-resize {
     display: none;
   }
 
-  /* Start screen: tighter padding */
-  .start-screen {
-    padding: 1rem;
-    bottom: 48px;
+  /* Hide spawn labels on mobile, keep icons */
+  .taskbar-spawn-btn {
+    width: 32px;
   }
 
-  .start-section-grid {
-    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-  }
-
-  .start-tile {
-    padding: .75rem;
-    min-height: 64px;
-  }
-
-  /* Files sidebar: collapse on mobile */
   .files-sidebar {
     width: 0;
     overflow: hidden;

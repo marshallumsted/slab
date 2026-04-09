@@ -1,0 +1,9 @@
+{
+  "id": "logs",
+  "name": "Logs",
+  "order": 6,
+  "tile": { "color": "gray", "size": "normal" },
+  "window": { "width": 700, "height": 400 },
+  "scripts": ["logs.js"],
+  "dependencies": []
+}
