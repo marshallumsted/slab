@@ -381,10 +381,28 @@ function buildSysmonContent() {
   const el = document.createElement('div');
   el.className = 'sysmon-app';
   el.innerHTML = `
-    <div class="sysmon-grid" id="sysmon-grid"></div>
+    <div class="sysmon-dash">
+      <div class="sysmon-top">
+        <div class="slab-tile slab-tile--red sysmon-tile" id="sm-cpu"></div>
+        <div class="slab-tile sysmon-tile" id="sm-mem"></div>
+        <div class="slab-tile sysmon-tile" id="sm-up"></div>
+        <div class="slab-tile sysmon-tile" id="sm-proc"></div>
+      </div>
+      <div class="sysmon-body">
+        <div class="sysmon-col" id="sm-left"></div>
+        <div class="sysmon-col" id="sm-right"></div>
+      </div>
+      <div class="sysmon-footer" id="sm-footer"></div>
+    </div>
   `;
 
-  const grid = el.querySelector('#sysmon-grid');
+  const cpuEl = el.querySelector('#sm-cpu');
+  const memEl = el.querySelector('#sm-mem');
+  const upEl = el.querySelector('#sm-up');
+  const procEl = el.querySelector('#sm-proc');
+  const leftEl = el.querySelector('#sm-left');
+  const rightEl = el.querySelector('#sm-right');
+  const footerEl = el.querySelector('#sm-footer');
   let interval = null;
 
   async function poll() {
@@ -392,142 +410,79 @@ function buildSysmonContent() {
       const res = await fetch('/api/sysmon');
       const s = await res.json();
       render(s);
-    } catch {
-      grid.innerHTML = '<div style="color:var(--gray-500);padding:1rem;">failed to load</div>';
-    }
+    } catch { }
   }
 
   function render(s) {
-    grid.innerHTML = '';
+    // headline tiles — update in place
+    cpuEl.innerHTML = tileInner('CPU', `${s.cpu.usage_total.toFixed(0)}%`, `${s.cpu.freq_mhz.toFixed(0)} MHz`);
+    memEl.innerHTML = tileInner('Memory', `${s.memory.percent.toFixed(0)}%`, `${s.memory.used_mb} / ${s.memory.total_mb} MB`);
+    upEl.innerHTML = tileInner('Uptime', formatUptime(s.uptime), `Load ${s.load.map(v => v.toFixed(2)).join('  ')}`);
+    procEl.innerHTML = tileInner('Procs', `${s.processes}`, s.hostname);
 
-    // row 1: headline tiles
-    grid.appendChild(tile('CPU', `${s.cpu.usage_total.toFixed(0)}%`, s.cpu.model, 'red'));
-    grid.appendChild(tile('Memory', `${s.memory.used_mb} / ${s.memory.total_mb} MB`, `${s.memory.percent.toFixed(0)}% used`, 'gray'));
-    grid.appendChild(tile('Uptime', formatUptime(s.uptime), `Load: ${s.load.map(v => v.toFixed(2)).join('  ')}`, 'gray'));
-    grid.appendChild(tile('Processes', `${s.processes}`, s.hostname, 'gray'));
+    // left column: cores + temps
+    let leftHtml = '';
 
-    // CPU cores
     if (s.cpu.usage_per_core.length > 0) {
-      const section = document.createElement('div');
-      section.className = 'sysmon-section';
-      section.innerHTML = '<div class="sysmon-section-title">CPU Cores</div>';
-      const bars = document.createElement('div');
-      bars.className = 'sysmon-cores';
+      leftHtml += '<div class="sysmon-section-title">Cores</div><div class="sysmon-cores">';
+      // two-column core layout for compactness
+      const half = Math.ceil(s.cpu.usage_per_core.length / 2);
+      leftHtml += '<div class="sysmon-cores-col">';
       s.cpu.usage_per_core.forEach((pct, i) => {
-        const bar = document.createElement('div');
-        bar.className = 'sysmon-core';
-        bar.innerHTML = `
-          <div class="sysmon-core-label">${i}</div>
-          <div class="sysmon-bar"><div class="sysmon-bar-fill" style="width:${pct.toFixed(0)}%"></div></div>
-          <div class="sysmon-core-pct">${pct.toFixed(0)}%</div>
-        `;
-        bars.appendChild(bar);
+        if (i === half) leftHtml += '</div><div class="sysmon-cores-col">';
+        leftHtml += `<div class="sysmon-core"><span class="sysmon-core-label">${i}</span><div class="sysmon-bar"><div class="sysmon-bar-fill" style="width:${pct.toFixed(0)}%"></div></div><span class="sysmon-core-pct">${pct.toFixed(0)}%</span></div>`;
       });
-      section.appendChild(bars);
-      grid.appendChild(section);
+      leftHtml += '</div></div>';
     }
 
-    // Temperatures
     if (s.temps.length > 0) {
-      const section = document.createElement('div');
-      section.className = 'sysmon-section';
-      section.innerHTML = '<div class="sysmon-section-title">Temperatures</div>';
-      const list = document.createElement('div');
-      list.className = 'sysmon-temp-list';
+      leftHtml += '<div class="sysmon-section-title" style="margin-top:8px;">Temps</div>';
       s.temps.forEach(t => {
-        const row = document.createElement('div');
-        row.className = 'sysmon-temp-row';
-        const tempClass = t.temp_c > 80 ? 'sysmon-temp--hot' : t.temp_c > 60 ? 'sysmon-temp--warm' : '';
-        row.innerHTML = `
-          <span class="sysmon-temp-label">${t.label}</span>
-          <span class="sysmon-temp-val ${tempClass}">${t.temp_c.toFixed(0)}&deg;C</span>
-        `;
-        list.appendChild(row);
+        const cls = t.temp_c > 80 ? 'sysmon-temp--hot' : t.temp_c > 60 ? 'sysmon-temp--warm' : '';
+        leftHtml += `<div class="sysmon-temp-row"><span class="sysmon-temp-label">${t.label}</span><span class="sysmon-temp-val ${cls}">${t.temp_c.toFixed(0)}&deg;C</span></div>`;
       });
-      section.appendChild(list);
-      grid.appendChild(section);
     }
 
-    // Disks
+    leftEl.innerHTML = leftHtml;
+
+    // right column: disks + network + swap
+    let rightHtml = '';
+
     if (s.disk.length > 0) {
-      const section = document.createElement('div');
-      section.className = 'sysmon-section';
-      section.innerHTML = '<div class="sysmon-section-title">Disks</div>';
+      rightHtml += '<div class="sysmon-section-title">Disks</div>';
       s.disk.forEach(d => {
-        const row = document.createElement('div');
-        row.className = 'sysmon-disk';
-        row.innerHTML = `
-          <div class="sysmon-disk-header">
-            <span>${d.mount}</span>
-            <span class="sysmon-disk-detail">${d.used_gb.toFixed(1)} / ${d.total_gb.toFixed(1)} GB</span>
-          </div>
-          <div class="sysmon-bar"><div class="sysmon-bar-fill ${d.percent > 90 ? 'sysmon-bar--danger' : ''}" style="width:${d.percent.toFixed(0)}%"></div></div>
-        `;
-        section.appendChild(row);
+        rightHtml += `<div class="sysmon-disk"><div class="sysmon-disk-header"><span>${d.mount}</span><span class="sysmon-disk-detail">${d.used_gb.toFixed(1)}/${d.total_gb.toFixed(1)}G</span></div><div class="sysmon-bar"><div class="sysmon-bar-fill ${d.percent > 90 ? 'sysmon-bar--danger' : ''}" style="width:${d.percent.toFixed(0)}%"></div></div></div>`;
       });
-      grid.appendChild(section);
     }
 
-    // Network
     if (s.network.length > 0) {
-      const section = document.createElement('div');
-      section.className = 'sysmon-section';
-      section.innerHTML = '<div class="sysmon-section-title">Network</div>';
-      const netGrid = document.createElement('div');
-      netGrid.className = 'sysmon-net-grid';
+      rightHtml += '<div class="sysmon-section-title" style="margin-top:8px;">Network</div><div class="sysmon-net-grid">';
       s.network.forEach(n => {
-        const card = document.createElement('div');
-        card.className = 'sysmon-net-card';
-        card.innerHTML = `
-          <div class="sysmon-net-iface">${n.interface}</div>
-          <div class="sysmon-net-row"><span>RX</span><span>${formatBytes(n.rx_bytes)}</span></div>
-          <div class="sysmon-net-row"><span>TX</span><span>${formatBytes(n.tx_bytes)}</span></div>
-        `;
-        netGrid.appendChild(card);
+        rightHtml += `<div class="sysmon-net-card"><div class="sysmon-net-iface">${n.interface}</div><div class="sysmon-net-row"><span>RX</span><span>${formatBytes(n.rx_bytes)}</span></div><div class="sysmon-net-row"><span>TX</span><span>${formatBytes(n.tx_bytes)}</span></div></div>`;
       });
-      section.appendChild(netGrid);
-      grid.appendChild(section);
+      rightHtml += '</div>';
     }
 
-    // Swap
     if (s.swap.total_mb > 0) {
-      const section = document.createElement('div');
-      section.className = 'sysmon-section';
-      section.innerHTML = '<div class="sysmon-section-title">Swap</div>';
-      const row = document.createElement('div');
-      row.className = 'sysmon-disk';
-      row.innerHTML = `
-        <div class="sysmon-disk-header">
-          <span>Swap</span>
-          <span class="sysmon-disk-detail">${s.swap.used_mb} / ${s.swap.total_mb} MB</span>
-        </div>
-        <div class="sysmon-bar"><div class="sysmon-bar-fill" style="width:${s.swap.percent.toFixed(0)}%"></div></div>
-      `;
-      section.appendChild(row);
-      grid.appendChild(section);
+      rightHtml += `<div class="sysmon-section-title" style="margin-top:8px;">Swap</div><div class="sysmon-disk"><div class="sysmon-disk-header"><span>Swap</span><span class="sysmon-disk-detail">${s.swap.used_mb}/${s.swap.total_mb} MB</span></div><div class="sysmon-bar"><div class="sysmon-bar-fill" style="width:${s.swap.percent.toFixed(0)}%"></div></div></div>`;
     }
 
-    // Kernel
-    const section = document.createElement('div');
-    section.className = 'sysmon-section';
-    section.innerHTML = `
-      <div class="sysmon-section-title">System</div>
-      <div class="sysmon-sys-row"><span>Kernel</span><span>${s.kernel}</span></div>
-      <div class="sysmon-sys-row"><span>Hostname</span><span>${s.hostname}</span></div>
-      <div class="sysmon-sys-row"><span>CPU Freq</span><span>${s.cpu.freq_mhz.toFixed(0)} MHz</span></div>
+    rightEl.innerHTML = rightHtml;
+
+    // footer: system info inline
+    footerEl.innerHTML = `
+      <span>${s.hostname}</span>
+      <span>${s.kernel}</span>
+      <span>${s.cpu.model}</span>
     `;
-    grid.appendChild(section);
   }
 
-  function tile(label, value, sub, color) {
-    const t = document.createElement('div');
-    t.className = `slab-tile slab-tile--${color} sysmon-tile`;
-    t.innerHTML = `
+  function tileInner(label, value, sub) {
+    return `
       <div class="slab-tile-subtitle">${label}</div>
       <div class="slab-tile-value">${value}</div>
       <div class="sysmon-tile-sub">${sub}</div>
     `;
-    return t;
   }
 
   function formatUptime(seconds) {

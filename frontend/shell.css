@@ -903,27 +903,36 @@ select.files-dialog-input {
   font-family: var(--font-mono);
   font-size: .75rem;
   height: 100%;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--gray-700) transparent;
+  overflow: hidden;
 }
 
-.sysmon-grid {
+.sysmon-dash {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Top row: 4 headline tiles */
+.sysmon-top {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--gap);
-  padding: 0;
+  flex-shrink: 0;
 }
 
 .sysmon-tile {
-  padding: 1rem;
+  padding: .6rem .8rem;
+}
+
+.sysmon-tile .slab-tile-value {
+  font-size: 1.4rem;
 }
 
 .sysmon-tile-sub {
   font-family: var(--font-mono);
-  font-size: .55rem;
+  font-size: .5rem;
   color: var(--gray-500);
-  margin-top: .2rem;
+  margin-top: .1rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -933,53 +942,91 @@ select.files-dialog-input {
   color: rgba(255,255,255,.5);
 }
 
-/* Sections */
-.sysmon-section {
-  grid-column: 1 / -1;
-  padding: 12px;
+/* Body: two columns */
+.sysmon-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap);
+  min-height: 0;
+  margin-top: var(--gap);
+}
+
+.sysmon-col {
   background: var(--gray-900);
+  padding: 8px 10px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-700) transparent;
+}
+
+/* Footer: system info bar */
+.sysmon-footer {
+  flex-shrink: 0;
+  display: flex;
+  gap: 16px;
+  padding: 4px 10px;
+  background: var(--gray-900);
+  font-size: .5rem;
+  color: var(--gray-500);
+  border-top: 1px solid var(--gray-800);
+  overflow: hidden;
+}
+
+.sysmon-footer span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sysmon-section-title {
-  font-size: .6rem;
+  font-size: .55rem;
   font-weight: 700;
   letter-spacing: .08em;
   text-transform: uppercase;
   color: var(--red);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
-/* CPU core bars */
+/* CPU cores — two-column layout */
 .sysmon-cores {
   display: flex;
+  gap: 8px;
+}
+
+.sysmon-cores-col {
+  flex: 1;
+  display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
 .sysmon-core {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .sysmon-core-label {
-  font-size: .55rem;
+  font-size: .5rem;
   color: var(--gray-500);
-  width: 16px;
+  width: 14px;
   text-align: right;
+  flex-shrink: 0;
 }
 
 .sysmon-core-pct {
-  font-size: .55rem;
+  font-size: .5rem;
   color: var(--gray-500);
-  width: 32px;
+  width: 26px;
   text-align: right;
+  flex-shrink: 0;
 }
 
 /* Generic bar */
 .sysmon-bar {
   flex: 1;
-  height: 8px;
+  height: 6px;
   background: var(--gray-800);
   overflow: hidden;
 }
@@ -995,48 +1042,43 @@ select.files-dialog-input {
 }
 
 /* Temperatures */
-.sysmon-temp-list {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
 .sysmon-temp-row {
   display: flex;
   justify-content: space-between;
-  padding: 4px 0;
+  padding: 2px 0;
 }
 
 .sysmon-temp-label {
-  font-size: .65rem;
+  font-size: .55rem;
   color: var(--gray-300);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
 }
 
 .sysmon-temp-val {
-  font-size: .65rem;
+  font-size: .55rem;
   font-weight: 700;
   color: var(--white);
+  flex-shrink: 0;
+  margin-left: 8px;
 }
 
-.sysmon-temp--warm {
-  color: #f0a030;
-}
-
-.sysmon-temp--hot {
-  color: var(--red);
-}
+.sysmon-temp--warm { color: #f0a030; }
+.sysmon-temp--hot { color: var(--red); }
 
 /* Disks */
 .sysmon-disk {
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .sysmon-disk-header {
   display: flex;
   justify-content: space-between;
-  font-size: .65rem;
+  font-size: .55rem;
   color: var(--gray-300);
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .sysmon-disk-detail {
@@ -1045,42 +1087,31 @@ select.files-dialog-input {
 
 /* Network */
 .sysmon-net-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--gap);
 }
 
 .sysmon-net-card {
   background: var(--gray-800);
-  padding: 8px 10px;
+  padding: 6px 8px;
+  flex: 1;
+  min-width: 100px;
 }
 
 .sysmon-net-iface {
-  font-size: .65rem;
+  font-size: .55rem;
   font-weight: 700;
   color: var(--white);
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .sysmon-net-row {
   display: flex;
   justify-content: space-between;
-  font-size: .55rem;
+  font-size: .5rem;
   color: var(--gray-500);
   padding: 1px 0;
-}
-
-/* System info rows */
-.sysmon-sys-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: .65rem;
-  color: var(--gray-300);
-  padding: 3px 0;
-}
-
-.sysmon-sys-row span:first-child {
-  color: var(--gray-500);
 }
 
 /* ── Media Viewer ── */
