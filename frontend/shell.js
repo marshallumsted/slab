@@ -1625,7 +1625,7 @@ fetch('/api/user').then(r => r.json()).then(data => {
   USER = data.user;
   HOME = data.home;
   HOSTNAME = data.hostname || '';
-  document.title = `[S] — ${HOSTNAME}`;
+  document.title = `[S] ${HOSTNAME}`;
 }).catch(() => {});
 
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif']);
