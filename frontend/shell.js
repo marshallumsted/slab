@@ -1828,7 +1828,7 @@ function buildMediaContent(initialFolder, initialFile) {
     try {
       const res = await fetch('/api/media/scan');
       const data = await res.json();
-      folders = data.folders;
+      folders = data.folders.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
       renderFolders();
     } catch { }
   }
@@ -1869,21 +1869,42 @@ function buildMediaContent(initialFolder, initialFile) {
     } catch { }
   }
 
+  let stripObserver = null;
+
   function renderStrip() {
     stripEl.innerHTML = '';
+    if (stripObserver) stripObserver.disconnect();
+
+    stripObserver = new IntersectionObserver((entries) => {
+      for (const ioEntry of entries) {
+        const t = ioEntry.target;
+        if (ioEntry.isIntersecting && !t.dataset.loaded) {
+          const img = new Image();
+          img.onload = () => {
+            t.style.backgroundImage = `url(${t.dataset.src})`;
+            t.dataset.loaded = '1';
+          };
+          img.src = t.dataset.src;
+        }
+      }
+    }, { root: stripEl, rootMargin: '200px 0px' });
+
     mediaFiles.forEach((file, i) => {
       const thumb = document.createElement('div');
       thumb.className = 'media-thumb';
       if (i === currentIdx) thumb.classList.add('active');
 
+      const src = file.is_video
+        ? `/api/thumbnail?path=${encodeURIComponent(file.path)}`
+        : `/api/raw?path=${encodeURIComponent(file.path)}`;
+      thumb.dataset.src = src;
+      stripObserver.observe(thumb);
+
       if (file.is_video) {
-        thumb.style.backgroundImage = `url(/api/thumbnail?path=${encodeURIComponent(file.path)})`;
         const badge = document.createElement('div');
         badge.className = 'media-thumb-badge';
         badge.textContent = '\u25B6';
         thumb.appendChild(badge);
-      } else {
-        thumb.style.backgroundImage = `url(/api/raw?path=${encodeURIComponent(file.path)})`;
       }
 
       thumb.addEventListener('click', () => {
