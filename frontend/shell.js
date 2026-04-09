@@ -36,6 +36,11 @@ window.Slab = {
     return undefined;
   },
 
+  // Spawn an app element as a tile on the grid (not a window)
+  spawnTile(appId, elementId, options) {
+    return spawnTile(appId, elementId, options || {});
+  },
+
   // Event bus
   emit(event, data) {
     (Slab._bus[event] || []).forEach(fn => fn(data));
@@ -400,7 +405,62 @@ function buildTileGrid(manifests) {
   }).catch(() => {});
 }
 
+// ── Spawn Tiles ──
+
+let spawnTileCounter = 0;
+
+function spawnTile(appId, elementId, options) {
+  const app = Slab._apps[appId];
+  if (!app || !app.buildElement) return null;
+
+  const el = app.buildElement(elementId);
+  if (!el) return null;
+
+  const size = options.size || 'normal'; // normal (1x1), wide (2x1), tall (1x2), large (2x2)
+  const id = 'spawn-' + appId + '-' + (spawnTileCounter++);
+
+  const tile = document.createElement('div');
+  tile.className = 'spawned-tile';
+  tile.dataset.spawnId = id;
+  if (size === 'wide') tile.classList.add('spawned-tile--wide');
+  else if (size === 'tall') tile.classList.add('spawned-tile--tall');
+  else if (size === 'large') tile.classList.add('spawned-tile--large');
+
+  // close button
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'spawned-tile-close';
+  closeBtn.textContent = '\u00d7';
+  closeBtn.title = 'Remove';
+  closeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    tile.remove();
+  });
+
+  tile.appendChild(closeBtn);
+  tile.appendChild(el);
+
+  // insert after the app launcher tiles (before system app sections)
+  const firstSysLabel = tileGrid.querySelector('.tile-section-label:not(:first-child)');
+  if (firstSysLabel) {
+    tileGrid.insertBefore(tile, firstSysLabel);
+  } else {
+    tileGrid.appendChild(tile);
+  }
+
+  return tile;
+}
+
 // ── Spawn Buttons ──
+
+let activeSpawnPopup = null;
+
+function closeSpawnPopup() {
+  if (activeSpawnPopup) { activeSpawnPopup.remove(); activeSpawnPopup = null; }
+}
+
+document.addEventListener('click', (e) => {
+  if (activeSpawnPopup && !activeSpawnPopup.contains(e.target)) closeSpawnPopup();
+});
 
 function buildSpawnButtons(manifests) {
   spawnContainer.innerHTML = '';
@@ -410,19 +470,47 @@ function buildSpawnButtons(manifests) {
       btn.className = 'taskbar-spawn-btn';
       btn.title = spawn.label;
       btn.innerHTML = spawn.icon;
-      btn.addEventListener('click', () => {
-        const app = Slab._apps[manifest.id];
-        if (!app) return;
-        if (app.buildElement) {
-          const el = app.buildElement(spawn.id);
-          if (el) {
-            createWindow(manifest.id, spawn.label, el,
-              manifest.window?.width || 600, manifest.window?.height || 400);
-            return;
+
+      // if spawn has subitems, show a popup menu
+      if (spawn.subitems && spawn.subitems.length > 0) {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          closeSpawnPopup();
+
+          const popup = document.createElement('div');
+          popup.className = 'spawn-popup';
+
+          for (const sub of spawn.subitems) {
+            const item = document.createElement('button');
+            item.className = 'spawn-popup-item';
+            item.innerHTML = `<span class="spawn-popup-icon">${sub.icon || ''}</span><span>${sub.label}</span>`;
+            item.addEventListener('click', () => {
+              closeSpawnPopup();
+              spawnTile(manifest.id, sub.id, { size: sub.size || 'normal' });
+            });
+            popup.appendChild(item);
           }
-        }
-        launchApp(manifest.id);
-      });
+
+          // position above the button
+          const rect = btn.getBoundingClientRect();
+          popup.style.left = rect.left + 'px';
+          popup.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+          document.body.appendChild(popup);
+          activeSpawnPopup = popup;
+        });
+      } else {
+        // single action — spawn as tile or fall back to window
+        btn.addEventListener('click', () => {
+          const app = Slab._apps[manifest.id];
+          if (!app) return;
+          if (app.buildElement) {
+            const result = spawnTile(manifest.id, spawn.id, { size: spawn.size || 'normal' });
+            if (result) return;
+          }
+          launchApp(manifest.id);
+        });
+      }
+
       spawnContainer.appendChild(btn);
     }
   }

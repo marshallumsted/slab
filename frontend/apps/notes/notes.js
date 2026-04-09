@@ -489,7 +489,7 @@
     };
   }
 
-  // ── Quick Spawn: Sticky Note Element ──
+  // ── Spawn Elements ──
 
   function buildStickySpawn() {
     const el = document.createElement('div');
@@ -517,6 +517,205 @@
     return el;
   }
 
+  function buildLegalSpawn() {
+    const el = document.createElement('div');
+    el.className = 'legal-editor';
+    el.style.height = '100%';
+
+    const rowsEl = document.createElement('div');
+    rowsEl.className = 'legal-rows';
+    const addBtn = document.createElement('button');
+    addBtn.className = 'legal-add-row';
+    addBtn.textContent = '+ Add Row';
+    el.appendChild(rowsEl);
+    el.appendChild(addBtn);
+
+    let rows = [['', '']];
+    let noteName = null;
+    let saveTimeout = null;
+
+    function schedSave() {
+      if (saveTimeout) clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(async () => {
+        if (!noteName) {
+          noteName = 'note-' + Date.now().toString(36) + '.json';
+          await ensureDir(NOTES_DIR());
+        }
+        await saveNote(noteName, JSON.stringify({ rows }));
+      }, 600);
+    }
+
+    function renderRows() {
+      rowsEl.innerHTML = '';
+      rows.forEach((row, i) => {
+        const rowEl = document.createElement('div');
+        rowEl.className = 'legal-row';
+
+        const left = document.createElement('input');
+        left.className = 'legal-cell';
+        left.type = 'text';
+        left.value = row[0];
+        left.placeholder = 'Key';
+        left.spellcheck = false;
+        left.addEventListener('input', () => { rows[i][0] = left.value; schedSave(); });
+        left.addEventListener('keydown', (e) => {
+          e.stopPropagation();
+          if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); right.focus(); }
+          if (e.key === 'Enter') { e.preventDefault(); addRow(i + 1); }
+        });
+
+        const right = document.createElement('input');
+        right.className = 'legal-cell';
+        right.type = 'text';
+        right.value = row[1];
+        right.placeholder = 'Value';
+        right.spellcheck = false;
+        right.addEventListener('input', () => { rows[i][1] = right.value; schedSave(); });
+        right.addEventListener('keydown', (e) => {
+          e.stopPropagation();
+          if (e.key === 'Tab' && e.shiftKey) { e.preventDefault(); left.focus(); }
+          if (e.key === 'Enter') { e.preventDefault(); addRow(i + 1); }
+          if (e.key === 'Backspace' && right.value === '' && left.value === '' && rows.length > 1) {
+            e.preventDefault(); rows.splice(i, 1); renderRows(); schedSave();
+          }
+        });
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'legal-remove';
+        removeBtn.textContent = '\u00d7';
+        removeBtn.addEventListener('click', () => {
+          if (rows.length <= 1) return;
+          rows.splice(i, 1); renderRows(); schedSave();
+        });
+
+        rowEl.appendChild(left);
+        rowEl.appendChild(right);
+        rowEl.appendChild(removeBtn);
+        rowsEl.appendChild(rowEl);
+      });
+    }
+
+    function addRow(at) {
+      rows.splice(at, 0, ['', '']);
+      renderRows();
+      schedSave();
+      const newRow = rowsEl.children[at];
+      if (newRow) newRow.querySelector('.legal-cell').focus();
+    }
+
+    addBtn.addEventListener('click', () => addRow(rows.length));
+    renderRows();
+    return el;
+  }
+
+  function buildSketchSpawn() {
+    const el = document.createElement('div');
+    el.className = 'sketch-editor';
+    el.style.height = '100%';
+
+    el.innerHTML = `
+      <div class="sketch-toolbar">
+        <button class="sketch-tool active" data-tool="pen" title="Pen">\u270E</button>
+        <button class="sketch-tool" data-tool="eraser" title="Eraser">\u2B1C</button>
+        <div class="sketch-divider"></div>
+        <button class="sketch-size active" data-size="2">S</button>
+        <button class="sketch-size" data-size="5">M</button>
+        <button class="sketch-size" data-size="10">L</button>
+        <div class="sketch-divider"></div>
+        <input class="sketch-color" type="color" value="#e63227" title="Color" />
+        <div class="sketch-spacer"></div>
+        <button class="sketch-clear" title="Clear">Clear</button>
+      </div>
+      <div class="sketch-canvas-wrap"></div>
+    `;
+
+    const canvasWrap = el.querySelector('.sketch-canvas-wrap');
+    const canvas = document.createElement('canvas');
+    canvas.className = 'sketch-canvas';
+    canvasWrap.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
+
+    let tool = 'pen', lineWidth = 2, color = '#e63227';
+    let drawing = false, lastX = 0, lastY = 0;
+    let noteName = null, saveTimeout = null;
+
+    // tool/size/color selection
+    el.querySelectorAll('.sketch-tool').forEach(btn => {
+      btn.addEventListener('click', () => {
+        el.querySelectorAll('.sketch-tool').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        tool = btn.dataset.tool;
+      });
+    });
+    el.querySelectorAll('.sketch-size').forEach(btn => {
+      btn.addEventListener('click', () => {
+        el.querySelectorAll('.sketch-size').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        lineWidth = parseInt(btn.dataset.size);
+      });
+    });
+    el.querySelector('.sketch-color').addEventListener('input', (e) => { color = e.target.value; });
+    el.querySelector('.sketch-clear').addEventListener('click', () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      schedSave();
+    });
+
+    function resizeCanvas() {
+      const rect = canvasWrap.getBoundingClientRect();
+      const w = Math.floor(rect.width), h = Math.floor(rect.height);
+      if (w <= 0 || h <= 0 || (canvas.width === w && canvas.height === h)) return;
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      canvas.width = w; canvas.height = h;
+      ctx.putImageData(imgData, 0, 0);
+    }
+
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      if (e.touches) return [e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top];
+      return [e.clientX - rect.left, e.clientY - rect.top];
+    }
+
+    function startDraw(e) { drawing = true; [lastX, lastY] = getPos(e); }
+    function draw(e) {
+      if (!drawing) return;
+      e.preventDefault();
+      const [x, y] = getPos(e);
+      ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(x, y);
+      ctx.strokeStyle = tool === 'eraser' ? '#000' : color;
+      ctx.lineWidth = tool === 'eraser' ? lineWidth * 4 : lineWidth;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over';
+      ctx.stroke();
+      lastX = x; lastY = y;
+    }
+    function stopDraw() { if (!drawing) return; drawing = false; schedSave(); }
+
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDraw);
+    canvas.addEventListener('mouseleave', stopDraw);
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDraw(e); }, { passive: false });
+    canvas.addEventListener('touchmove', draw, { passive: false });
+    canvas.addEventListener('touchend', stopDraw);
+
+    function schedSave() {
+      if (saveTimeout) clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(async () => {
+        if (!noteName) {
+          noteName = 'sketch-' + Date.now().toString(36) + '.png';
+          await ensureDir(NOTES_DIR());
+        }
+        await saveNote(noteName, canvas.toDataURL('image/png'));
+      }, 1000);
+    }
+
+    requestAnimationFrame(() => resizeCanvas());
+    const ro = new ResizeObserver(() => resizeCanvas());
+    ro.observe(canvasWrap);
+
+    return el;
+  }
+
   // ── Register ──
 
   Slab.register('notes', {
@@ -526,6 +725,8 @@
 
     buildElement(id) {
       if (id === 'sticky-note') return buildStickySpawn();
+      if (id === 'legal-pad') return buildLegalSpawn();
+      if (id === 'sketch-pad') return buildSketchSpawn();
       return null;
     },
 

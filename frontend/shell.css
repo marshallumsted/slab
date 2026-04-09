@@ -277,6 +277,93 @@
   grid-column: 1 / -1;
 }
 
+/* ── Spawned Tiles ── */
+
+.spawned-tile {
+  background: var(--gray-800);
+  position: relative;
+  min-height: 100px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.spawned-tile--wide { grid-column: span 2; }
+.spawned-tile--tall { grid-row: span 2; }
+.spawned-tile--large { grid-column: span 2; grid-row: span 2; min-height: 250px; }
+
+.spawned-tile > :last-child {
+  flex: 1;
+  min-height: 0;
+}
+
+.spawned-tile-close {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 5;
+  width: 18px;
+  height: 18px;
+  background: transparent;
+  border: none;
+  color: var(--gray-600);
+  font-size: .7rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity .15s, color .1s, background .1s;
+}
+
+.spawned-tile:hover .spawned-tile-close {
+  opacity: 1;
+}
+
+.spawned-tile-close:hover {
+  color: var(--white);
+  background: var(--red);
+}
+
+/* ── Spawn Popup Menu ── */
+
+.spawn-popup {
+  position: fixed;
+  z-index: 1001;
+  background: var(--gray-900);
+  border: 1px solid var(--gray-700);
+  min-width: 140px;
+  padding: 4px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.spawn-popup-item {
+  font-family: var(--font-mono);
+  font-size: .65rem;
+  color: var(--gray-300);
+  background: transparent;
+  border: none;
+  padding: 6px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  transition: background .1s, color .1s;
+}
+
+.spawn-popup-item:hover {
+  background: var(--red);
+  color: #fff;
+}
+
+.spawn-popup-icon {
+  width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
 /* ── Desktop (windows layer) ── */
 
 #desktop {
