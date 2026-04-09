@@ -250,15 +250,6 @@ Two-tier configuration:
 
 `GET /api/config` returns a merged view with `locked[]` and `is_admin` flag. Locked settings show a LOCKED badge and greyed-out controls.
 
-### Notes App
-
-A lightweight per-workspace scratchpad. Not a full document editor — just fast plain text notes.
-
-- **Workspace-scoped:** Each workspace has its own notes. School notes don't clutter coding mode.
-- **Plain text:** Stored as `.txt` files in `~/.config/slab/data/notes/{workspace}/`. No markdown rendering, no rich text — just text. Open them in any editor, copy them off the server, sync them with rsync.
-- **Tile preview:** The notes tile on the grid shows the first few lines of the most recent note.
-- **Simple UI:** List of notes on the left, content on the right. Create, edit, delete. That's it.
-
 ### Settings Philosophy
 
 macOS menu bar approach — the desktop owns the settings UI, apps just declare data.
@@ -334,30 +325,12 @@ All major systemd-based Linux distributions:
 
 No distro-specific code — talks to kernel interfaces (`/proc`, `/sys`) and systemd (D-Bus).
 
-## File Browser Design
+## Apps
 
-- Left sidebar: Places (user-editable), System, Network
-- Main pane: list or grid view, column headers (name, size, modified)
-- Dolphin-style path bar: click breadcrumbs or click to type a path
-- Image/video previews: lazy-loaded via IntersectionObserver, fade in/out on scroll
-- Video thumbnails: ffmpeg frame extraction, cached with path+mtime hash
-- Selection: click (select), ctrl+click (toggle), shift+click (range)
-- Folders: single-click opens. Files: single-click selects, double-click actions.
-- Right-click context menus: rename, copy, cut, paste, delete, download, copy path, add to places
-- Network places: SMB, SFTP, FTP, NFS, WebDAV source configuration
-- All file operations: rename, copy (recursive), move, delete, mkdir, touch, download
+App-specific design lives in each app's `README.md` inside `frontend/apps/{id}/`. See the app folders for details on each app's features, planned work, and implementation notes.
 
-## Planned Features
+Built apps: terminal, sysmon, files, editor, media, settings, services (stub), logs (stub)
 
-- Split-screen file browser (dual panes)
-- Full drag and drop (files between panes, to/from desktop, reorder sidebar)
-- Terminal (xterm.js or custom, real shell via websocket PTY)
-- System monitor (live /proc stats, tile dashboard)
-- Service manager (systemd list/start/stop/restart via D-Bus)
-- Log viewer (journalctl streaming via websocket)
-- Text editor (syntax highlighting, file save)
-- Tier 2 web app pinning (URL → window → tile)
-- Tier 3 X11 bridge (Xpra per-window streaming)
-- User management and login screen
-- Docker deployment image
-- System language settings
+Planned apps: notes, timer, media-controls, bookmarks, wizard (first-time setup)
+
+See [BLUEPRINT.md](BLUEPRINT.md) for the build order.
