@@ -1,4 +1,9 @@
-use axum::{http::StatusCode, response::Json};
+use axum::{
+    extract::WebSocketUpgrade,
+    http::StatusCode,
+    response::{IntoResponse, Json},
+};
+use futures::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -123,12 +128,13 @@ pub async fn launch(Json(params): Json<LaunchParams>) -> Result<Json<LaunchResul
             .to_string()
     });
 
-    // start xpra as a daemon (it backgrounds itself)
-    let result = std::process::Command::new("xpra")
+    // start xpra with a virtual display, bind websocket to localhost only
+    // env_remove DISPLAY and WAYLAND_DISPLAY to prevent attaching to host session
+    let spawn_result = std::process::Command::new("xpra")
         .args([
             "start",
             &display,
-            &format!("--bind-ws=0.0.0.0:{port}"),
+            &format!("--bind-ws=127.0.0.1:{port}"),
             "--html=on",
             "--no-notifications",
             "--no-mdns",
@@ -138,14 +144,15 @@ pub async fn launch(Json(params): Json<LaunchParams>) -> Result<Json<LaunchResul
             "--sharing=yes",
             &format!("--start={cmd}"),
         ])
+        .env_remove("DISPLAY")
+        .env_remove("WAYLAND_DISPLAY")
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::piped())
         .status();
 
-    match result {
+    match spawn_result {
         Ok(status) if status.success() => {
-            // get the xpra server pid
             let pid = std::process::Command::new("xpra")
                 .args(["info", &display])
                 .output()
@@ -198,6 +205,63 @@ pub async fn proxy(
             Vec::new(),
         ),
     }
+}
+
+// websocket proxy — upgrades the client connection and bridges to xpra's websocket
+pub async fn ws_proxy(
+    axum::extract::Path((port, _path)): axum::extract::Path<(u16, String)>,
+    ws: WebSocketUpgrade,
+) -> impl IntoResponse {
+    ws.on_upgrade(move |client_ws| async move {
+        let url = format!("ws://127.0.0.1:{port}/");
+        let Ok((server_ws, _)) = tokio_tungstenite::connect_async(&url).await else {
+            return;
+        };
+
+        let (mut client_tx, mut client_rx) = client_ws.split();
+        let (mut server_tx, mut server_rx) = server_ws.split();
+
+        use tokio_tungstenite::tungstenite::Message as TungMsg;
+        use axum::extract::ws::Message as AxumMsg;
+
+        // client → server
+        let c2s = async {
+            while let Some(Ok(msg)) = client_rx.next().await {
+                let tung_msg = match msg {
+                    AxumMsg::Text(t) => TungMsg::Text(t.to_string().into()),
+                    AxumMsg::Binary(b) => TungMsg::Binary(b.to_vec().into()),
+                    AxumMsg::Ping(p) => TungMsg::Ping(p.to_vec().into()),
+                    AxumMsg::Pong(p) => TungMsg::Pong(p.to_vec().into()),
+                    AxumMsg::Close(_) => break,
+                };
+                if server_tx.send(tung_msg).await.is_err() {
+                    break;
+                }
+            }
+        };
+
+        // server → client
+        let s2c = async {
+            while let Some(Ok(msg)) = server_rx.next().await {
+                let axum_msg = match msg {
+                    TungMsg::Text(t) => AxumMsg::Text(t.to_string().into()),
+                    TungMsg::Binary(b) => AxumMsg::Binary(b.to_vec().into()),
+                    TungMsg::Ping(p) => AxumMsg::Ping(p.to_vec().into()),
+                    TungMsg::Pong(p) => AxumMsg::Pong(p.to_vec().into()),
+                    TungMsg::Close(_) => break,
+                    _ => continue,
+                };
+                if client_tx.send(axum_msg).await.is_err() {
+                    break;
+                }
+            }
+        };
+
+        tokio::select! {
+            _ = c2s => {},
+            _ = s2c => {},
+        }
+    })
 }
 
 fn reqwest_blocking(url: &str) -> Option<(String, Vec<u8>)> {
