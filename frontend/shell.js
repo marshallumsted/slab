@@ -970,9 +970,12 @@ function buildFilesContent() {
     const fullPath = currentPath + '/' + entry.name;
     if (isImageFile(entry.name) || isVideoFile(entry.name)) {
       openMediaViewer(currentPath, entry.name);
-    } else {
+    } else if (isPdfFile(entry.name)) {
+      openInEditor(fullPath);
+    } else if (isTextFile(entry.name)) {
       openInEditor(fullPath);
     }
+    // binary/unknown files: no action on double-click
   }
 
   function renderEntries(entries) {
@@ -1384,6 +1387,46 @@ function isVideoFile(name) {
   return VIDEO_EXTS.has(ext);
 }
 
+const TEXT_EXTS = new Set([
+  'txt', 'log', 'md', 'markdown', 'mdown', 'mkd',
+  'js', 'jsx', 'ts', 'tsx', 'mjs', 'cjs',
+  'py', 'pyw', 'rs', 'go', 'java', 'c', 'cpp', 'h', 'hpp', 'cs', 'rb', 'php', 'swift', 'kt', 'lua', 'r', 'dart', 'zig', 'v', 'nim', 'ex', 'exs', 'erl', 'hs', 'ml', 'scala', 'clj',
+  'html', 'htm', 'css', 'scss', 'sass', 'less', 'vue', 'svelte',
+  'json', 'jsonc', 'json5', 'xml', 'yaml', 'yml', 'toml', 'ini', 'cfg', 'conf', 'env',
+  'sh', 'bash', 'zsh', 'fish', 'bat', 'cmd', 'ps1',
+  'sql', 'graphql', 'gql',
+  'dockerfile', 'makefile', 'cmake',
+  'gitignore', 'gitattributes', 'editorconfig', 'eslintrc', 'prettierrc',
+  'csv', 'tsv', 'diff', 'patch',
+  'tex', 'bib', 'rst', 'adoc', 'org',
+  'lock', 'sum',
+]);
+const BINARY_EXTS = new Set([
+  'exe', 'dll', 'so', 'dylib', 'bin', 'o', 'a', 'lib',
+  'zip', 'tar', 'gz', 'bz2', 'xz', 'zst', '7z', 'rar',
+  'iso', 'img', 'dmg',
+  'wasm', 'class', 'pyc', 'pyo',
+  'db', 'sqlite', 'sqlite3',
+  'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'ods', 'odp',
+  'ttf', 'otf', 'woff', 'woff2', 'eot',
+]);
+
+function isPdfFile(name) {
+  return name.split('.').pop().toLowerCase() === 'pdf';
+}
+
+function isTextFile(name) {
+  const ext = name.split('.').pop().toLowerCase();
+  // explicit text extensions
+  if (TEXT_EXTS.has(ext)) return true;
+  // explicit binary — reject
+  if (BINARY_EXTS.has(ext)) return false;
+  if (IMAGE_EXTS.has(ext) || VIDEO_EXTS.has(ext)) return false;
+  if (ext === 'pdf') return false;
+  // no extension or unknown — assume text
+  return true;
+}
+
 function hasPreview(name, cfg) {
   const f = cfg?.settings?.files || {};
   if (isImageFile(name)) return f.image_previews !== false;
@@ -1577,11 +1620,19 @@ function buildEditorContent(initialFile) {
       return;
     }
 
+    const name = path.split('/').pop();
+
+    // PDF: no model, use embed
+    if (isPdfFile(name)) {
+      tabs.push({ path, name, model: null, modified: false, isPdf: true });
+      switchTab(tabs.length - 1);
+      return;
+    }
+
     try {
       const res = await fetch(`/api/files/read?path=${encodeURIComponent(path)}`);
       if (!res.ok) throw new Error();
       const content = await res.text();
-      const name = path.split('/').pop();
       const lang = getLang(name);
 
       const model = monaco.editor.createModel(content, lang);
@@ -1606,17 +1657,40 @@ function buildEditorContent(initialFile) {
     if (idx < 0 || idx >= tabs.length) return;
     activeTab = idx;
     const tab = tabs[idx];
-    editor.setModel(tab.model);
-    langEl.textContent = tab.model.getLanguageId();
 
-    // show preview button for markdown
-    const isMd = isMarkdown(tab.name);
-    previewBtn.classList.toggle('hidden', !isMd);
+    if (tab.isPdf) {
+      // PDF view
+      containerEl.classList.add('hidden');
+      previewEl.classList.add('hidden');
+      previewBtn.classList.add('hidden');
 
-    // exit preview if switching to non-markdown
-    if (!isMd && previewMode) {
-      previewMode = false;
-      showEditor();
+      // reuse or create pdf container
+      let pdfEl = el.querySelector('.editor-pdf');
+      if (!pdfEl) {
+        pdfEl = document.createElement('div');
+        pdfEl.className = 'editor-pdf';
+        el.appendChild(pdfEl);
+      }
+      pdfEl.classList.remove('hidden');
+      pdfEl.innerHTML = `<embed src="/api/raw?path=${encodeURIComponent(tab.path)}" type="application/pdf" class="editor-pdf-embed" />`;
+      langEl.textContent = 'PDF';
+      statusEl.textContent = '';
+    } else {
+      // hide pdf if showing
+      const pdfEl = el.querySelector('.editor-pdf');
+      if (pdfEl) pdfEl.classList.add('hidden');
+
+      // text/code view
+      if (previewMode) {
+        previewMode = false;
+        showEditor();
+      }
+      containerEl.classList.remove('hidden');
+      editor.setModel(tab.model);
+      langEl.textContent = tab.model.getLanguageId();
+
+      const isMd = isMarkdown(tab.name);
+      previewBtn.classList.toggle('hidden', !isMd);
     }
 
     renderTabs();
@@ -1665,7 +1739,7 @@ function buildEditorContent(initialFile) {
 
   function closeTab(idx) {
     const tab = tabs[idx];
-    tab.model.dispose();
+    if (tab.model) tab.model.dispose();
     tabs.splice(idx, 1);
     if (tabs.length === 0) {
       newTab();

@@ -98,6 +98,12 @@ pub async fn serve_raw(Query(params): Query<RawParams>) -> impl IntoResponse {
         Some("bmp") => "image/bmp",
         Some("ico") => "image/x-icon",
         Some("avif") => "image/avif",
+        Some("pdf") => "application/pdf",
+        Some("mp4") => "video/mp4",
+        Some("webm") => "video/webm",
+        Some("mkv") => "video/x-matroska",
+        Some("avi") => "video/x-msvideo",
+        Some("mov") => "video/quicktime",
         _ => "application/octet-stream",
     };
 
