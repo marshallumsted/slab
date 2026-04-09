@@ -897,6 +897,28 @@ select.files-dialog-input {
   margin: 4px 0;
 }
 
+/* ── Terminal ── */
+
+.term-app {
+  height: 100%;
+  width: 100%;
+}
+
+.term-app .xterm {
+  height: 100%;
+  padding: 4px;
+}
+
+.window-body:has(.term-app) {
+  padding: 0;
+  overflow: hidden;
+  background: #111111;
+}
+
+body.theme-light .window-body:has(.term-app) {
+  background: #f5f5f5;
+}
+
 /* ── Editor ── */
 
 .editor-app {

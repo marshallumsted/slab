@@ -363,17 +363,116 @@ function enableResize(win, handle) {
 
 function buildTerminalContent() {
   const el = document.createElement('div');
-  el.style.cssText = 'font-family:var(--font-mono);font-size:.8rem;color:var(--gray-300);height:100%;display:flex;flex-direction:column;';
-  el.innerHTML = `
-    <div style="flex:1;overflow-y:auto;padding-bottom:.5rem;">
-      <div style="color:var(--gray-500);">slab terminal — shell not connected</div>
-      <div style="color:var(--gray-500);margin-top:.3rem;">waiting for backend...</div>
-    </div>
-    <div style="display:flex;align-items:center;gap:.5rem;border-top:1px solid var(--gray-700);padding-top:.5rem;">
-      <span style="color:var(--red);">$</span>
-      <input type="text" style="flex:1;background:transparent;border:none;color:var(--white);font-family:var(--font-mono);font-size:.8rem;outline:none;" placeholder="..." />
-    </div>
-  `;
+  el.className = 'term-app';
+
+  let term = null;
+  let fitAddon = null;
+  let ws = null;
+
+  function init() {
+    if (typeof Terminal === 'undefined') {
+      setTimeout(init, 200);
+      return;
+    }
+
+    const isLight = document.body.classList.contains('theme-light');
+
+    term = new Terminal({
+      fontFamily: "'Space Mono', monospace",
+      fontSize: 14,
+      cursorBlink: true,
+      cursorStyle: 'block',
+      theme: isLight ? {
+        background: '#f5f5f5',
+        foreground: '#111111',
+        cursor: '#e63227',
+        selectionBackground: '#e6322744',
+        black: '#333333', red: '#e63227', green: '#4caf50', yellow: '#f0a030',
+        blue: '#5599dd', magenta: '#bb66bb', cyan: '#55bbbb', white: '#111111',
+        brightBlack: '#888888', brightRed: '#ff4444', brightGreen: '#66cc66',
+        brightYellow: '#ffcc33', brightBlue: '#77bbff', brightMagenta: '#dd88dd',
+        brightCyan: '#77dddd', brightWhite: '#000000',
+      } : {
+        background: '#111111',
+        foreground: '#cccccc',
+        cursor: '#e63227',
+        selectionBackground: '#e6322744',
+        black: '#111111', red: '#e63227', green: '#4caf50', yellow: '#f0a030',
+        blue: '#5599dd', magenta: '#bb66bb', cyan: '#55bbbb', white: '#e0e0e0',
+        brightBlack: '#555555', brightRed: '#ff4444', brightGreen: '#66cc66',
+        brightYellow: '#ffcc33', brightBlue: '#77bbff', brightMagenta: '#dd88dd',
+        brightCyan: '#77dddd', brightWhite: '#ffffff',
+      },
+    });
+
+    fitAddon = new FitAddon.FitAddon();
+    term.loadAddon(fitAddon);
+
+    if (typeof WebLinksAddon !== 'undefined') {
+      term.loadAddon(new WebLinksAddon.WebLinksAddon());
+    }
+
+    term.open(el);
+    fitAddon.fit();
+
+    // connect websocket
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${proto}//${location.host}/api/terminal`);
+
+    ws.onopen = () => {
+      // send initial size
+      sendResize();
+    };
+
+    ws.onmessage = (e) => {
+      term.write(e.data);
+    };
+
+    ws.onclose = () => {
+      term.write('\r\n\x1b[31m[session ended]\x1b[0m\r\n');
+    };
+
+    ws.onerror = () => {
+      term.write('\r\n\x1b[31m[connection error]\x1b[0m\r\n');
+    };
+
+    // input → websocket
+    term.onData((data) => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(data);
+      }
+    });
+
+    // resize handling
+    term.onResize(({ cols, rows }) => {
+      sendResize();
+    });
+
+    function sendResize() {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send('\x01' + JSON.stringify({ cols: term.cols, rows: term.rows }));
+      }
+    }
+
+    // re-fit on window body resize
+    const resizeObserver = new ResizeObserver(() => {
+      if (fitAddon) fitAddon.fit();
+    });
+    resizeObserver.observe(el);
+
+    // cleanup when removed from DOM
+    const mutObserver = new MutationObserver(() => {
+      if (!document.contains(el)) {
+        if (ws) ws.close();
+        if (term) term.dispose();
+        resizeObserver.disconnect();
+        mutObserver.disconnect();
+      }
+    });
+    mutObserver.observe(document.body, { childList: true, subtree: true });
+  }
+
+  init();
   return el;
 }
 
