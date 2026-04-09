@@ -53,19 +53,34 @@ Finish the remaining Tier 1 apps. Each is a new folder in `frontend/apps/`.
 
 ---
 
-## Phase 4 — Quick Spawn
+## Phase 4 — Tile Spawn System
 
-Wire up spawn as app elements, not just app launchers.
+The core infrastructure for dropping app elements onto the tile grid — not as windows, as tiles.
 
-### 4a. Element Spawn Framework
-- Spawn buttons create app elements (slim tiles), not full windows
-- Each app implements `buildElement(id)` returning a focused single-purpose UI piece
-- Spawned elements live on the tile grid in the current context
+### 4a. Shell: `Slab.spawnTile()`
+- New shell API: `Slab.spawnTile(appId, elementId, options)` — inserts an element into the tile grid as a live tile
+- Spawned tiles snap into the masonry grid alongside app launcher tiles
+- Spawned tiles are resizable (drag handles, push neighbors)
+- Spawned tiles have a close button (X in corner) to remove from grid
+- Spawned tiles persist in user config so they survive page reloads
+- `options`: initial size (normal, wide, tall, large), position hint
 
-### 4b. Spawn Elements
-- **Sticky note** — blank text tile, header becomes filename, stored as `.txt`
-- **Terminal** — single shell, optionally with preset command (blank, Claude, system update, custom)
-- **File browser** — single folder view, unscoped
+### 4b. Spawn Button Behavior
+- Spawn buttons on the taskbar call `Slab.spawnTile()` instead of `createWindow()`
+- Apps that don't implement `buildElement()` fall back to `launchApp()` (open as window)
+- Same element can be spawned multiple times — each is an independent tile
+
+### 4c. Spawn Elements
+- **Sticky note** — flat text tile snapped into grid, auto-saves
+- **Terminal** — single shell tile in the grid, click to interact
+- **File browser** — single folder view tile, click to expand or open full app
+- **Bookmark** — single URL tile
+
+### 4d. Tile vs Window
+- Tiles live on the grid (background layer), windows float above
+- A tile can "pop out" into a window (full app mode) and back
+- Quick spawn always creates tiles. App launcher tiles always create windows.
+- Both coexist — a sticky note tile on the grid behind a terminal window
 - **Bookmark** — single pinned URL
 
 ### 4c. Sticky Note Features

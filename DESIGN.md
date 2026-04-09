@@ -103,6 +103,10 @@ These are the items that earn permanent muscle memory on the taskbar. Workflow-s
 
 This reinforces the core concept: tiles are app elements, not apps. Quick Spawn is the fast lane to drop an element into your workflow without opening the full app.
 
+**Spawned elements are tiles, not windows.** They snap into the grid alongside app launcher tiles — not floating windows. A sticky note is a tile on the grid. A spawned terminal is a tile on the grid. They live in the background layer, resizable, closeable, persistent across reloads. Windows are for full apps that need focus. Tiles are for elements that stay visible while you work.
+
+A tile can "pop out" into a full window if you need more space, and snap back when you're done. Both coexist — a sticky note tile on the grid behind a terminal window.
+
 Quick Spawn lives on the taskbar — fixed position, same muscle memory from any screen. Spawned items belong to the current context: spawn a sticky note inside a workflow and it stays in that workflow, disappearing when you switch away and reappearing when you return. Spawn one in desktop mode and it lives on the desktop.
 
 **Sticky note styles:**
