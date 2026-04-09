@@ -39,18 +39,18 @@
 }
 
 .taskbar-start:hover {
-  background: rgba(0, 0, 0, .25);
+  background: var(--taskbar-overlay);
 }
 
 .taskbar-start.active {
-  background: rgba(0, 0, 0, .25);
+  background: var(--taskbar-overlay);
 }
 
 /* Divider between sections */
 .taskbar-divider {
   width: 1px;
   height: 20px;
-  background: rgba(0, 0, 0, .25);
+  background: var(--taskbar-overlay);
   flex-shrink: 0;
 }
 
@@ -68,7 +68,7 @@
   font-weight: 600;
   letter-spacing: .04em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, .8);
+  color: var(--taskbar-text);
   background: transparent;
   border: none;
   padding: 0 10px;
@@ -82,17 +82,17 @@
 }
 
 .taskbar-app:hover {
-  background: rgba(0, 0, 0, .25);
+  background: var(--taskbar-overlay);
   color: var(--white);
 }
 
 .taskbar-app.active {
-  background: rgba(0, 0, 0, .2);
+  background: var(--taskbar-overlay);
   color: var(--white);
 }
 
 .taskbar-app.focused {
-  background: rgba(0, 0, 0, .3);
+  background: var(--taskbar-overlay-strong);
   color: var(--white);
 }
 
@@ -114,7 +114,7 @@
 .taskbar-clock {
   font-family: var(--font-mono);
   font-size: .65rem;
-  color: rgba(255, 255, 255, .7);
+  color: var(--taskbar-text-muted);
   letter-spacing: .04em;
 }
 
@@ -248,7 +248,7 @@
   inset: 0;
   bottom: 68px;
   z-index: 500;
-  background: rgba(0, 0, 0, .95);
+  background: var(--overlay-heavy);
   backdrop-filter: blur(20px);
   display: flex;
   align-items: center;
@@ -659,7 +659,7 @@
   right: 6px;
   z-index: 2;
   font-size: .6rem;
-  background: rgba(0, 0, 0, .6);
+  background: var(--scrim);
   color: var(--white);
   width: 18px;
   height: 18px;
@@ -695,16 +695,16 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, .5);
+  background: var(--overlay-light);
   transition: background .15s;
 }
 
 .files-card--preview:hover .files-preview-img::after {
-  background: rgba(0, 0, 0, .3);
+  background: var(--taskbar-overlay-strong);
 }
 
 .files-row--preview:hover .files-preview-img::after {
-  background: rgba(0, 0, 0, .4);
+  background: var(--scrim-light);
 }
 
 /* Text above the image */
@@ -717,7 +717,7 @@
 .files-card--preview .files-preview-img.loaded ~ .files-card-icon,
 .files-card--preview .files-preview-img.loaded ~ .files-card-name {
   color: var(--white);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, .6);
+  text-shadow: 0 1px 3px var(--scrim);
 }
 
 .files-row--preview .files-col-name,
@@ -731,7 +731,7 @@
 .files-row--preview .files-preview-img.loaded ~ .files-col-size,
 .files-row--preview .files-preview-img.loaded ~ .files-col-mod {
   color: var(--white);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, .6);
+  text-shadow: 0 1px 3px var(--scrim);
 }
 
 .files-error {
@@ -745,7 +745,7 @@
   position: absolute;
   inset: 0;
   z-index: 200;
-  background: rgba(0, 0, 0, .7);
+  background: var(--overlay-medium);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -850,7 +850,7 @@ select.files-dialog-input {
 }
 
 .files-dialog-ok:hover {
-  background: #cc2b22;
+  background: var(--red-hover);
 }
 
 /* ── Context Menu ── */

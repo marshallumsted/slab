@@ -1471,7 +1471,7 @@ function buildSettingsContent() {
       <div class="settings-page-title">General</div>
       <div class="settings-page-desc">Global slab preferences</div>
       <div class="settings-section">
-        ${settingSelect('Theme', 'Color scheme for the desktop', g.theme || 'dark', [['dark', 'Dark (default)'], ['light', 'Light (coming soon)']], 'general-theme')}
+        ${settingSelect('Theme', 'Color scheme for the desktop', g.theme || 'dark', [['dark', 'Dark'], ['light', 'Light']], 'general-theme')}
       </div>
     `;
   }
@@ -1618,9 +1618,11 @@ function buildSettingsContent() {
 function applySettings() {
   fetch('/api/config').then(r => r.json()).then(cfg => {
     const p = cfg.settings?.performance || {};
+    const g = cfg.settings?.general || {};
     document.body.classList.toggle('no-animations', p.animations === false);
     document.body.classList.toggle('no-dot-grid', p.dot_grid === false);
     document.body.classList.toggle('no-blur', p.backdrop_blur === false);
+    document.body.classList.toggle('theme-light', g.theme === 'light');
   }).catch(() => {});
 }
 // apply on load
