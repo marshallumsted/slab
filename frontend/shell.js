@@ -226,18 +226,32 @@ buildStartScreen();
 
 // ── Window Management ──
 
+const isMobile = () => window.innerWidth <= 768;
+
 function createWindow(id, title, content, w, h) {
   const win = document.createElement('div');
   win.className = 'slab-window';
   win.dataset.id = id + '-' + Date.now();
-  win.style.width = w + 'px';
-  win.style.height = h + 'px';
 
-  // center with slight random offset
-  const ox = Math.round((window.innerWidth - w) / 2 + (Math.random() - 0.5) * 80);
-  const oy = Math.round((window.innerHeight - h - 68) / 2 + (Math.random() - 0.5) * 60);
-  win.style.left = Math.max(0, ox) + 'px';
-  win.style.top = Math.max(0, oy) + 'px';
+  if (isMobile()) {
+    // fit window to screen on mobile
+    const taskbarH = 48;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight - taskbarH;
+    win.style.width = vw + 'px';
+    win.style.height = vh + 'px';
+    win.style.left = '0px';
+    win.style.top = '0px';
+  } else {
+    win.style.width = w + 'px';
+    win.style.height = h + 'px';
+
+    // center with slight random offset
+    const ox = Math.round((window.innerWidth - w) / 2 + (Math.random() - 0.5) * 80);
+    const oy = Math.round((window.innerHeight - h - 68) / 2 + (Math.random() - 0.5) * 60);
+    win.style.left = Math.max(0, ox) + 'px';
+    win.style.top = Math.max(0, oy) + 'px';
+  }
 
   // title bar
   const titlebar = document.createElement('div');
@@ -291,8 +305,9 @@ function createWindow(id, title, content, w, h) {
   win.appendChild(body);
   win.appendChild(resizeHandle);
 
-  // focus on click
+  // focus on click/touch
   win.addEventListener('mousedown', () => focusWindow(win));
+  win.addEventListener('touchstart', () => focusWindow(win), { passive: true });
 
   // drag
   enableDrag(win, titlebar);
@@ -396,54 +411,92 @@ function removeTaskbarEntry(id) {
 function enableDrag(win, handle) {
   let startX, startY, origX, origY;
 
-  handle.addEventListener('mousedown', (e) => {
-    if (e.target.closest('.window-ctrl')) return;
-    if (win.classList.contains('maximized')) return;
-
-    startX = e.clientX;
-    startY = e.clientY;
+  function onStart(clientX, clientY) {
+    if (win.classList.contains('maximized')) return null;
+    startX = clientX;
+    startY = clientY;
     origX = win.offsetLeft;
     origY = win.offsetTop;
+    return true;
+  }
 
-    const onMove = (e) => {
-      win.style.left = (origX + e.clientX - startX) + 'px';
-      win.style.top = (origY + e.clientY - startY) + 'px';
-    };
+  function onDrag(clientX, clientY) {
+    win.style.left = (origX + clientX - startX) + 'px';
+    win.style.top = (origY + clientY - startY) + 'px';
+  }
 
+  handle.addEventListener('mousedown', (e) => {
+    if (e.target.closest('.window-ctrl')) return;
+    if (!onStart(e.clientX, e.clientY)) return;
+
+    const onMove = (e) => onDrag(e.clientX, e.clientY);
     const onUp = () => {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
     };
-
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
   });
+
+  handle.addEventListener('touchstart', (e) => {
+    if (e.target.closest('.window-ctrl')) return;
+    const t = e.touches[0];
+    if (!onStart(t.clientX, t.clientY)) return;
+
+    const onMove = (e) => { e.preventDefault(); const t = e.touches[0]; onDrag(t.clientX, t.clientY); };
+    const onEnd = () => {
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onEnd);
+    };
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onEnd);
+  }, { passive: true });
 }
 
 // ── Resize ──
 
 function enableResize(win, handle) {
+  let rStartX, rStartY, rStartW, rStartH;
+
+  function onResizeStart(clientX, clientY) {
+    rStartX = clientX;
+    rStartY = clientY;
+    rStartW = win.offsetWidth;
+    rStartH = win.offsetHeight;
+  }
+
+  function onResizeDrag(clientX, clientY) {
+    win.style.width = Math.max(300, rStartW + clientX - rStartX) + 'px';
+    win.style.height = Math.max(200, rStartH + clientY - rStartY) + 'px';
+  }
+
   handle.addEventListener('mousedown', (e) => {
     e.preventDefault();
     e.stopPropagation();
+    onResizeStart(e.clientX, e.clientY);
 
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const startW = win.offsetWidth;
-    const startH = win.offsetHeight;
-
-    const onMove = (e) => {
-      win.style.width = Math.max(300, startW + e.clientX - startX) + 'px';
-      win.style.height = Math.max(200, startH + e.clientY - startY) + 'px';
-    };
-
+    const onMove = (e) => onResizeDrag(e.clientX, e.clientY);
     const onUp = () => {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
     };
-
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
+  });
+
+  handle.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const t = e.touches[0];
+    onResizeStart(t.clientX, t.clientY);
+
+    const onMove = (e) => { e.preventDefault(); const t = e.touches[0]; onResizeDrag(t.clientX, t.clientY); };
+    const onEnd = () => {
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onEnd);
+    };
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onEnd);
   });
 }
 
@@ -583,32 +636,45 @@ function buildTerminalContent() {
     wrap.appendChild(divider);
     wrap.appendChild(paneB);
 
-    // drag to resize
+    // drag to resize (mouse + touch)
     let dragging = false;
+
+    function dividerStart(clientX, clientY) {
+      dragging = true;
+      return {
+        startPos: direction === 'h' ? clientX : clientY,
+        totalSize: direction === 'h' ? wrap.offsetWidth : wrap.offsetHeight,
+        startRatio: (direction === 'h' ? paneA.offsetWidth : paneA.offsetHeight) /
+                    (direction === 'h' ? wrap.offsetWidth : wrap.offsetHeight),
+      };
+    }
+
+    function dividerMove(ctx, clientX, clientY) {
+      if (!dragging) return;
+      const currentPos = direction === 'h' ? clientX : clientY;
+      const delta = (currentPos - ctx.startPos) / ctx.totalSize;
+      const newRatio = Math.max(0.1, Math.min(0.9, ctx.startRatio + delta));
+      paneA.style.flex = `${newRatio}`;
+      paneB.style.flex = `${1 - newRatio}`;
+    }
+
     divider.addEventListener('mousedown', (e) => {
       e.preventDefault();
-      dragging = true;
-      const startPos = direction === 'h' ? e.clientX : e.clientY;
-      const totalSize = direction === 'h' ? wrap.offsetWidth : wrap.offsetHeight;
-      const startRatio = (direction === 'h' ? paneA.offsetWidth : paneA.offsetHeight) / totalSize;
-
-      const onMove = (e) => {
-        if (!dragging) return;
-        const currentPos = direction === 'h' ? e.clientX : e.clientY;
-        const delta = (currentPos - startPos) / totalSize;
-        const newRatio = Math.max(0.1, Math.min(0.9, startRatio + delta));
-        paneA.style.flex = `${newRatio}`;
-        paneB.style.flex = `${1 - newRatio}`;
-      };
-
-      const onUp = () => {
-        dragging = false;
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
-      };
-
+      const ctx = dividerStart(e.clientX, e.clientY);
+      const onMove = (e) => dividerMove(ctx, e.clientX, e.clientY);
+      const onUp = () => { dragging = false; document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
+    });
+
+    divider.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const t = e.touches[0];
+      const ctx = dividerStart(t.clientX, t.clientY);
+      const onMove = (e) => { e.preventDefault(); const t = e.touches[0]; dividerMove(ctx, t.clientX, t.clientY); };
+      const onEnd = () => { dragging = false; document.removeEventListener('touchmove', onMove); document.removeEventListener('touchend', onEnd); };
+      document.addEventListener('touchmove', onMove, { passive: false });
+      document.addEventListener('touchend', onEnd);
     });
 
     return wrap;

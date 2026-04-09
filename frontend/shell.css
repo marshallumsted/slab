@@ -4,6 +4,7 @@
   position: fixed;
   inset: 0;
   z-index: 1;
+  touch-action: none;
 }
 
 /* ── Taskbar ── */
@@ -224,6 +225,8 @@
   padding: var(--pad-md);
   scrollbar-width: thin;
   scrollbar-color: var(--gray-700) transparent;
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 
 .window-body:has(.files-app),
@@ -263,6 +266,11 @@
 
 .start-screen.hidden {
   display: none;
+}
+
+.start-screen {
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 
 .start-grid {
@@ -2285,4 +2293,82 @@ body.no-animations *::before,
 body.no-animations *::after {
   transition-duration: 0s !important;
   animation-duration: 0s !important;
+}
+
+/* ── Mobile ── */
+
+@media (max-width: 768px) {
+  /* Taskbar: full width at bottom */
+  #taskbar {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transform: none;
+    width: 100%;
+    height: 48px;
+    justify-content: space-between;
+    padding: 0 2px;
+  }
+
+  .taskbar-apps {
+    flex: 1;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .taskbar-apps::-webkit-scrollbar { display: none; }
+
+  /* Windows: fill screen on mobile */
+  .slab-window {
+    min-width: 0 !important;
+    min-height: 0 !important;
+  }
+
+  .slab-window.maximized {
+    height: calc(100vh - 48px) !important;
+  }
+
+  /* Hide resize handle on mobile */
+  .window-resize {
+    display: none;
+  }
+
+  /* Start screen: tighter padding */
+  .start-screen {
+    padding: 1rem;
+    bottom: 48px;
+  }
+
+  .start-section-grid {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  }
+
+  .start-tile {
+    padding: .75rem;
+    min-height: 64px;
+  }
+
+  /* Files sidebar: collapse on mobile */
+  .files-sidebar {
+    width: 0;
+    overflow: hidden;
+    border: none;
+    padding: 0;
+  }
+
+  .files-header {
+    grid-template-columns: 1fr 60px;
+  }
+
+  .files-header > :last-child {
+    display: none;
+  }
+
+  .files-row {
+    grid-template-columns: 1fr 60px;
+  }
+
+  .files-row > .files-col-mod {
+    display: none;
+  }
 }
