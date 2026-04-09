@@ -69,7 +69,7 @@ const apps = [
     name: 'Files',
     color: 'gray',
     tile: 'normal',
-    launch: () => createWindow('files', 'Files', buildFilesContent(), 650, 450),
+    launch: () => createWindow('files', 'Files', buildFilesContent(), 800, 500),
   },
   {
     id: 'editor',
@@ -390,23 +390,128 @@ function buildFilesContent() {
   const el = document.createElement('div');
   el.className = 'files-app';
   el.innerHTML = `
-    <div class="files-toolbar">
-      <button class="files-back">&larr;</button>
-      <div class="files-path"></div>
+    <div class="files-sidebar">
+      <div class="files-sidebar-section">
+        <div class="files-sidebar-label">Places</div>
+        <div class="files-sidebar-item" data-path-key="home">Home</div>
+        <div class="files-sidebar-item" data-path-key="desktop">Desktop</div>
+        <div class="files-sidebar-item" data-path-key="documents">Documents</div>
+        <div class="files-sidebar-item" data-path-key="downloads">Downloads</div>
+        <div class="files-sidebar-item" data-path-key="pictures">Pictures</div>
+        <div class="files-sidebar-item" data-path-key="music">Music</div>
+        <div class="files-sidebar-item" data-path-key="videos">Videos</div>
+      </div>
+      <div class="files-sidebar-section">
+        <div class="files-sidebar-label">System</div>
+        <div class="files-sidebar-item" data-path="/">Root (/)</div>
+        <div class="files-sidebar-item" data-path="/tmp">Tmp</div>
+        <div class="files-sidebar-item" data-path="/etc">Etc</div>
+      </div>
     </div>
-    <div class="files-header">
-      <span class="files-col-name" data-sort="name">Name</span>
-      <span class="files-col-size" data-sort="size">Size</span>
-      <span class="files-col-mod" data-sort="modified">Modified</span>
+    <div class="files-main">
+      <div class="files-toolbar">
+        <button class="files-back">&larr;</button>
+        <div class="files-pathbar">
+          <div class="files-path"></div>
+          <input class="files-path-input" type="text" spellcheck="false" />
+        </div>
+        <div class="files-toolbar-right">
+          <button class="files-view-btn active" data-view="list" title="List">
+            <svg viewBox="0 0 12 12" width="12" height="12"><rect x="0" y="1" width="12" height="2" fill="currentColor"/><rect x="0" y="5" width="12" height="2" fill="currentColor"/><rect x="0" y="9" width="12" height="2" fill="currentColor"/></svg>
+          </button>
+          <button class="files-view-btn" data-view="grid" title="Grid">
+            <svg viewBox="0 0 12 12" width="12" height="12"><rect x="0" y="0" width="5" height="5" fill="currentColor"/><rect x="7" y="0" width="5" height="5" fill="currentColor"/><rect x="0" y="7" width="5" height="5" fill="currentColor"/><rect x="7" y="7" width="5" height="5" fill="currentColor"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="files-header">
+        <span class="files-col-name">Name</span>
+        <span class="files-col-size">Size</span>
+        <span class="files-col-mod">Modified</span>
+      </div>
+      <div class="files-list"></div>
     </div>
-    <div class="files-list"></div>
   `;
 
-  let currentPath = '/';
+  let currentPath = HOME;
+  let viewMode = 'list';
+  let editing = false;
   const pathEl = el.querySelector('.files-path');
+  const pathInput = el.querySelector('.files-path-input');
+  const pathBar = el.querySelector('.files-pathbar');
   const listEl = el.querySelector('.files-list');
+  const headerEl = el.querySelector('.files-header');
   const backBtn = el.querySelector('.files-back');
+  const sidebarItems = el.querySelectorAll('.files-sidebar-item');
+  const viewBtns = el.querySelectorAll('.files-view-btn');
   let parentPath = null;
+  let lastEntries = [];
+
+  function resolveSidebarPath(key) {
+    const map = { home: HOME, desktop: HOME + '/Desktop', documents: HOME + '/Documents', downloads: HOME + '/Downloads', pictures: HOME + '/Pictures', music: HOME + '/Music', videos: HOME + '/Videos' };
+    return map[key] || HOME;
+  }
+
+  // sidebar navigation
+  sidebarItems.forEach(item => {
+    item.addEventListener('click', () => {
+      const key = item.dataset.pathKey;
+      const path = key ? resolveSidebarPath(key) : item.dataset.path;
+      navigate(path);
+    });
+  });
+
+  // editable path bar — click to edit, enter to navigate, escape to cancel
+  pathBar.addEventListener('click', (e) => {
+    if (e.target.classList.contains('files-crumb')) return;
+    if (editing) return;
+    startEditing();
+  });
+
+  function startEditing() {
+    editing = true;
+    pathBar.classList.add('editing');
+    pathInput.value = currentPath;
+    pathInput.focus();
+    pathInput.select();
+  }
+
+  function stopEditing() {
+    editing = false;
+    pathBar.classList.remove('editing');
+  }
+
+  pathInput.addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Enter') {
+      const val = pathInput.value.trim();
+      if (val) navigate(val);
+      stopEditing();
+    } else if (e.key === 'Escape') {
+      stopEditing();
+    }
+  });
+
+  pathInput.addEventListener('blur', () => stopEditing());
+
+  // view toggle
+  viewBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      viewMode = btn.dataset.view;
+      viewBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      headerEl.style.display = viewMode === 'grid' ? 'none' : '';
+      renderEntries(lastEntries);
+    });
+  });
+
+  function updateSidebarActive() {
+    sidebarItems.forEach(item => {
+      const key = item.dataset.pathKey;
+      const path = key ? resolveSidebarPath(key) : item.dataset.path;
+      item.classList.toggle('active', path === currentPath);
+    });
+  }
 
   async function navigate(path) {
     try {
@@ -414,8 +519,10 @@ function buildFilesContent() {
       const data = await res.json();
       currentPath = data.path;
       parentPath = data.parent;
+      lastEntries = data.entries;
+      updateSidebarActive();
 
-      // build breadcrumb
+      // breadcrumb
       const parts = currentPath.split('/').filter(Boolean);
       let crumb = '<span class="files-crumb" data-path="/">/</span>';
       let accumulated = '';
@@ -424,15 +531,46 @@ function buildFilesContent() {
         crumb += `<span class="files-crumb" data-path="${accumulated}">${part}/</span>`;
       }
       pathEl.innerHTML = crumb;
-
-      // attach breadcrumb clicks
       pathEl.querySelectorAll('.files-crumb').forEach(c => {
-        c.addEventListener('click', () => navigate(c.dataset.path));
+        c.addEventListener('click', (e) => {
+          e.stopPropagation();
+          navigate(c.dataset.path);
+        });
       });
 
-      // build file list
-      listEl.innerHTML = '';
-      for (const entry of data.entries) {
+      renderEntries(data.entries);
+    } catch (e) {
+      listEl.innerHTML = '<div class="files-error">failed to load directory</div>';
+    }
+  }
+
+  function renderEntries(entries) {
+    listEl.innerHTML = '';
+    listEl.className = viewMode === 'grid' ? 'files-list files-list--grid' : 'files-list';
+
+    for (const entry of entries) {
+      if (viewMode === 'grid') {
+        const card = document.createElement('div');
+        card.className = 'files-card';
+        if (entry.is_dir) card.classList.add('files-card--dir');
+
+        const icon = document.createElement('div');
+        icon.className = 'files-card-icon';
+        icon.textContent = entry.is_dir ? '/' : getFileIcon(entry.name);
+
+        const name = document.createElement('div');
+        name.className = 'files-card-name';
+        name.textContent = entry.name;
+
+        card.appendChild(icon);
+        card.appendChild(name);
+
+        if (entry.is_dir) {
+          card.addEventListener('click', () => navigate(currentPath + '/' + entry.name));
+        }
+
+        listEl.appendChild(card);
+      } else {
         const row = document.createElement('div');
         row.className = 'files-row';
         if (entry.is_dir) row.classList.add('files-row--dir');
@@ -454,13 +592,11 @@ function buildFilesContent() {
         row.appendChild(mod);
 
         if (entry.is_dir) {
-          row.addEventListener('dblclick', () => navigate(currentPath + '/' + entry.name));
+          row.addEventListener('click', () => navigate(currentPath + '/' + entry.name));
         }
 
         listEl.appendChild(row);
       }
-    } catch (e) {
-      listEl.innerHTML = '<div class="files-error">failed to load directory</div>';
     }
   }
 
@@ -468,8 +604,22 @@ function buildFilesContent() {
     if (parentPath) navigate(parentPath);
   });
 
-  navigate('/');
+  navigate(HOME);
   return el;
+}
+
+// user info — populated at startup
+let USER = 'user';
+let HOME = '/home/user';
+fetch('/api/user').then(r => r.json()).then(data => {
+  USER = data.user;
+  HOME = data.home;
+}).catch(() => {});
+
+function getFileIcon(name) {
+  const ext = name.split('.').pop().toLowerCase();
+  const icons = { js: 'JS', ts: 'TS', rs: 'RS', py: 'PY', html: '<>', css: '{}', json: '{}', md: 'MD', txt: 'TXT', png: 'IMG', jpg: 'IMG', svg: 'SVG', mp4: 'VID', mp3: 'AUD', zip: 'ZIP', tar: 'TAR', gz: 'GZ', pdf: 'PDF', toml: 'CFG', yaml: 'CFG', yml: 'CFG', lock: 'LCK' };
+  return icons[ext] || '·';
 }
 
 function formatSize(bytes) {
