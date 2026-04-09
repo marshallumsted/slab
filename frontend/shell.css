@@ -555,52 +555,56 @@
   overflow: hidden;
 }
 
-/* Image previews — grid */
-.files-card--preview {
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+/* Image previews — overlay layer that fades in/out over the grey tile */
+.files-card--preview,
+.files-row--preview {
   position: relative;
 }
 
-.files-card--preview::after {
+/* The image layer — sits behind text, fades in/out */
+.files-preview-img {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity .35s ease;
+  z-index: 0;
+}
+
+.files-preview-img.loaded {
+  opacity: 1;
+}
+
+/* Dark scrim over the image so text stays readable */
+.files-preview-img::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, .55);
+  background: rgba(0, 0, 0, .5);
   transition: background .15s;
 }
 
-.files-card--preview:hover::after {
-  background: rgba(0, 0, 0, .35);
+.files-card--preview:hover .files-preview-img::after {
+  background: rgba(0, 0, 0, .3);
 }
 
+.files-row--preview:hover .files-preview-img::after {
+  background: rgba(0, 0, 0, .4);
+}
+
+/* Text above the image */
 .files-card--preview .files-card-icon,
 .files-card--preview .files-card-name {
   position: relative;
   z-index: 1;
+}
+
+.files-card--preview .files-preview-img.loaded ~ .files-card-icon,
+.files-card--preview .files-preview-img.loaded ~ .files-card-name {
   color: var(--white);
   text-shadow: 0 1px 3px rgba(0, 0, 0, .6);
-}
-
-/* Image previews — list */
-.files-row--preview {
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  position: relative;
-}
-
-.files-row--preview::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, .6);
-  transition: background .15s;
-}
-
-.files-row--preview:hover::after {
-  background: rgba(0, 0, 0, .45);
 }
 
 .files-row--preview .files-col-name,
@@ -608,6 +612,11 @@
 .files-row--preview .files-col-mod {
   position: relative;
   z-index: 1;
+}
+
+.files-row--preview .files-preview-img.loaded ~ .files-col-name,
+.files-row--preview .files-preview-img.loaded ~ .files-col-size,
+.files-row--preview .files-preview-img.loaded ~ .files-col-mod {
   color: var(--white);
   text-shadow: 0 1px 3px rgba(0, 0, 0, .6);
 }

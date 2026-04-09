@@ -544,9 +544,40 @@ function buildFilesContent() {
     }
   }
 
+  // lazy image loading — only load when visible, fade in/out
+  let previewObserver = null;
+
+  function setupPreviewObserver() {
+    if (previewObserver) previewObserver.disconnect();
+    previewObserver = new IntersectionObserver((entries) => {
+      for (const ioEntry of entries) {
+        const el = ioEntry.target;
+        const imgLayer = el.querySelector('.files-preview-img');
+        if (!imgLayer) continue;
+
+        if (ioEntry.isIntersecting) {
+          if (!el.dataset.loaded) {
+            const img = new Image();
+            img.onload = () => {
+              imgLayer.style.backgroundImage = `url(${el.dataset.preview})`;
+              imgLayer.classList.add('loaded');
+              el.dataset.loaded = '1';
+            };
+            img.src = el.dataset.preview;
+          } else {
+            imgLayer.classList.add('loaded');
+          }
+        } else {
+          imgLayer.classList.remove('loaded');
+        }
+      }
+    }, { root: listEl, rootMargin: '100px 0px' });
+  }
+
   function renderEntries(entries) {
     listEl.innerHTML = '';
     listEl.className = viewMode === 'grid' ? 'files-list files-list--grid' : 'files-list';
+    setupPreviewObserver();
 
     for (const entry of entries) {
       const isImage = !entry.is_dir && isImageFile(entry.name);
@@ -556,10 +587,14 @@ function buildFilesContent() {
         const card = document.createElement('div');
         card.className = 'files-card';
         if (entry.is_dir) card.classList.add('files-card--dir');
-        if (isImage) card.classList.add('files-card--preview');
 
         if (isImage) {
-          card.style.backgroundImage = `url(${imgUrl})`;
+          card.classList.add('files-card--preview');
+          card.dataset.preview = imgUrl;
+          const imgLayer = document.createElement('div');
+          imgLayer.className = 'files-preview-img';
+          card.appendChild(imgLayer);
+          previewObserver.observe(card);
         }
 
         const icon = document.createElement('div');
@@ -582,10 +617,14 @@ function buildFilesContent() {
         const row = document.createElement('div');
         row.className = 'files-row';
         if (entry.is_dir) row.classList.add('files-row--dir');
-        if (isImage) row.classList.add('files-row--preview');
 
         if (isImage) {
-          row.style.backgroundImage = `url(${imgUrl})`;
+          row.classList.add('files-row--preview');
+          row.dataset.preview = imgUrl;
+          const imgLayer = document.createElement('div');
+          imgLayer.className = 'files-preview-img';
+          row.appendChild(imgLayer);
+          previewObserver.observe(row);
         }
 
         const name = document.createElement('span');
