@@ -1,0 +1,234 @@
+/* ── X Bridge App ── */
+
+.xbridge-app {
+  font-family: var(--font-mono);
+  font-size: .75rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.xbridge-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--gray-900);
+  border-bottom: 1px solid var(--gray-800);
+  flex-shrink: 0;
+}
+
+.xbridge-header-title {
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--white);
+}
+
+.xbridge-header-status {
+  font-size: .55rem;
+  letter-spacing: .04em;
+}
+
+.xbridge-status-ok { color: #4caf50; }
+.xbridge-status-missing { color: var(--red); }
+
+.xbridge-search {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: .7rem;
+  background: var(--gray-800);
+  border: 1px solid var(--gray-700);
+  color: var(--white);
+  padding: 4px 8px;
+  width: 180px;
+  outline: none;
+}
+
+.xbridge-search:focus {
+  border-color: var(--red);
+}
+
+.xbridge-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-700) transparent;
+}
+
+.xbridge-empty {
+  color: var(--gray-500);
+  font-size: .7rem;
+  padding: 20px;
+  text-align: center;
+}
+
+.xbridge-category {
+  margin-bottom: 16px;
+}
+
+.xbridge-category-label {
+  font-size: .55rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 6px;
+}
+
+.xbridge-category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: var(--gap);
+}
+
+.xbridge-app-tile {
+  background: var(--gray-800);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 80px;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.xbridge-app-tile:hover {
+  background: var(--gray-700);
+}
+
+.xbridge-app-icon {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.xbridge-app-name {
+  font-size: .55rem;
+  color: var(--gray-300);
+  text-align: center;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+}
+
+/* ── Xpra Viewer (inside window) ── */
+
+.xbridge-viewer {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background: var(--black);
+}
+
+.xbridge-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.xbridge-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: .7rem;
+  color: var(--gray-500);
+}
+
+.xbridge-error {
+  color: var(--red);
+}
+
+.window-body:has(.xbridge-app) {
+  padding: 0;
+  overflow: hidden;
+}
+
+.window-body:has(.xbridge-viewer) {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* ── Setup Prompt ── */
+
+.xbridge-prompt-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--overlay-medium);
+}
+
+.xbridge-prompt {
+  background: var(--gray-900);
+  border: 1px solid var(--gray-700);
+  padding: 20px;
+  width: 340px;
+}
+
+.xbridge-prompt-title {
+  font-family: var(--font-mono);
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--white);
+  margin-bottom: 8px;
+}
+
+.xbridge-prompt-text {
+  font-size: .7rem;
+  color: var(--gray-300);
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.xbridge-prompt-actions {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.xbridge-prompt-btn {
+  font-family: var(--font-mono);
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border: none;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.xbridge-prompt-cancel {
+  background: var(--gray-800);
+  color: var(--gray-300);
+}
+
+.xbridge-prompt-cancel:hover {
+  background: var(--gray-700);
+}
+
+.xbridge-prompt-ok {
+  background: var(--red);
+  color: var(--white);
+}
+
+.xbridge-prompt-ok:hover {
+  background: var(--red-hover);
+}

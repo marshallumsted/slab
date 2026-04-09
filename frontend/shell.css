@@ -1292,37 +1292,7 @@ select.files-dialog-input {
   margin: 4px 0;
 }
 
-/* ── X Bridge ── */
-
-.xbridge-app {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  background: var(--black);
-}
-
-.xbridge-frame {
-  width: 100%;
-  height: 100%;
-  border: none;
-}
-
-.xbridge-loading {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-mono);
-  font-size: .7rem;
-  color: var(--gray-500);
-  z-index: 1;
-}
-
-.window-body:has(.xbridge-app) {
-  padding: 0;
-  overflow: hidden;
-}
+/* (X Bridge styles moved to frontend/apps/xbridge/xbridge.css) */
 
 /* ── Terminal ── */
 

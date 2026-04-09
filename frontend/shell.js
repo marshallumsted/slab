@@ -358,51 +358,7 @@ function buildTileGrid(manifests) {
     tileElements[manifest.id] = tile;
   }
 
-  // system X11 apps
-  fetch('/api/apps').then(r => r.json()).then(data => {
-    if (!data.apps || data.apps.length === 0) return;
-    const groups = {};
-    const categoryOrder = ['Internet', 'Development', 'Media', 'Graphics', 'Office', 'Games', 'System', 'Utilities', 'Education', 'Settings', 'Other'];
-    for (const app of data.apps) {
-      const cat = app.categories[0] || 'Other';
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat].push(app);
-    }
-    const sortedCats = Object.keys(groups).sort((a, b) => {
-      const ai = categoryOrder.indexOf(a);
-      const bi = categoryOrder.indexOf(b);
-      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-    });
-    for (const cat of sortedCats) {
-      const catLabel = document.createElement('div');
-      catLabel.className = 'tile-section-label';
-      catLabel.textContent = cat;
-      tileGrid.appendChild(catLabel);
-      for (const app of groups[cat]) {
-        const tile = document.createElement('div');
-        tile.className = 'sys-app-tile';
-        if (app.icon) {
-          const iconEl = document.createElement('img');
-          iconEl.className = 'sys-app-tile-icon';
-          iconEl.src = `/api/apps/icon?name=${encodeURIComponent(app.icon)}&size=48`;
-          iconEl.alt = '';
-          iconEl.loading = 'lazy';
-          iconEl.onerror = function() { this.style.display = 'none'; };
-          tile.appendChild(iconEl);
-        }
-        const name = document.createElement('div');
-        name.className = 'sys-app-tile-name';
-        name.textContent = app.name;
-        tile.appendChild(name);
-        if (app.comment) tile.title = app.comment;
-        tile.addEventListener('click', () => {
-          if (xbridgeAvailable) launchInXbridge(app.exec, app.name);
-          else showXbridgePrompt();
-        });
-        tileGrid.appendChild(tile);
-      }
-    }
-  }).catch(() => {});
+  // system X11 apps are populated by the xbridge app after it registers
 }
 
 // ── Spawn Tiles ──
@@ -799,46 +755,7 @@ fetch('/api/user').then(r => r.json()).then(data => {
   document.title = `[S] ${HOSTNAME}`;
 }).catch(() => {});
 
-// ── X Bridge ──
-
-let xbridgeAvailable = false;
-fetch('/api/xbridge/status').then(r => r.json()).then(d => { xbridgeAvailable = d.available; }).catch(() => {});
-
-function showXbridgePrompt() {
-  const dlg = document.createElement('div');
-  dlg.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:var(--overlay-medium);';
-  dlg.innerHTML = `<div class="files-dialog-box" style="width:340px;"><div class="files-dialog-title">Xpra Required</div><div style="font-size:.7rem;color:var(--gray-300);line-height:1.6;margin-bottom:8px;">System apps run inside slab via Xpra and its HTML5 client.<br>Install both from Settings &gt; Setup to enable this feature.</div><div class="files-dialog-actions"><button class="files-dialog-btn files-dialog-cancel">Close</button><button class="files-dialog-btn files-dialog-ok">Open Setup</button></div></div>`;
-  dlg.querySelector('.files-dialog-cancel').addEventListener('click', () => dlg.remove());
-  dlg.querySelector('.files-dialog-ok').addEventListener('click', () => { dlg.remove(); launchApp('settings'); });
-  document.body.appendChild(dlg);
-}
-
-async function launchInXbridge(exec, name) {
-  try {
-    const res = await fetch('/api/xbridge/launch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ exec, name }) });
-    if (!res.ok) return;
-    const data = await res.json();
-    const el = document.createElement('div');
-    el.className = 'xbridge-app';
-    el.innerHTML = `<div class="xbridge-loading">Starting ${name}...</div>`;
-    const win = createWindow('xbridge', name, el, 800, 600);
-    const proxyUrl = `/api/xbridge/proxy/${data.port}/index.html`;
-    let attempts = 0;
-    const poll = setInterval(async () => {
-      attempts++;
-      try {
-        const check = await fetch(proxyUrl, { method: 'HEAD' });
-        if (check.ok) { clearInterval(poll); el.innerHTML = `<iframe class="xbridge-frame" src="${proxyUrl}"></iframe>`; }
-        else if (attempts >= 30) { clearInterval(poll); el.innerHTML = `<div class="xbridge-loading" style="color:var(--red);">Failed to connect to ${name}</div>`; }
-        else { el.querySelector('.xbridge-loading').textContent = `Starting ${name}... (${attempts}s)`; }
-      } catch { if (attempts >= 30) { clearInterval(poll); el.innerHTML = `<div class="xbridge-loading" style="color:var(--red);">Failed to connect to ${name}</div>`; } }
-    }, 1000);
-    const observer = new MutationObserver(() => {
-      if (!document.contains(win)) { clearInterval(poll); fetch('/api/xbridge/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: data.id }) }); observer.disconnect(); }
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-  } catch {}
-}
+// ── X Bridge (handled by xbridge app) ──
 
 // ── Context Menu ──
 

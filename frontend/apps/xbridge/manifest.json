@@ -1,0 +1,10 @@
+{
+  "id": "xbridge",
+  "name": "Apps",
+  "order": 10,
+  "tile": { "color": "gray", "size": "normal" },
+  "window": { "width": 700, "height": 500 },
+  "scripts": ["xbridge.js"],
+  "styles": ["xbridge.css"],
+  "dependencies": []
+}
