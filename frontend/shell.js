@@ -575,8 +575,14 @@ function buildTerminalContent() {
       updatePaneFocus();
     }
 
+    function sendInput(data) {
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(data);
+    }
+
     init();
-    return { id, container, destroy, focus };
+    const pane = { id, container, destroy: () => { destroy(); delete terminalPanes[id]; }, focus, sendInput };
+    terminalPanes[id] = pane;
+    return pane;
   }
 
   function updatePaneFocus() {
@@ -2210,10 +2216,11 @@ function buildSettingsContent() {
   const nav = el.querySelector('.settings-nav');
   const main = el.querySelector('.settings-main');
   let cfg = null;
-  let activeSection = 'general';
+  let activeSection = 'setup';
 
   // section definitions
   const sections = [
+    { id: 'setup', label: 'Setup', group: 'slab', highlight: true },
     { id: 'general', label: 'General', group: 'slab' },
     { id: 'performance', label: 'Performance', group: 'slab' },
     { id: 'files', label: 'Files', group: 'apps' },
@@ -2241,6 +2248,7 @@ function buildSettingsContent() {
       }
       const item = document.createElement('div');
       item.className = 'settings-nav-item';
+      if (sec.highlight) item.classList.add('settings-nav-highlight');
       if (sec.id === activeSection) item.classList.add('active');
       item.textContent = sec.label;
       item.addEventListener('click', () => { activeSection = sec.id; renderNav(); renderSection(); });
@@ -2289,6 +2297,7 @@ function buildSettingsContent() {
 
   function renderSection() {
     const builders = {
+      setup: renderSetup,
       general: renderGeneral,
       performance: renderPerformance,
       files: renderFiles,
@@ -2341,6 +2350,126 @@ function buildSettingsContent() {
   }
 
   // ── Section renderers ──
+
+  async function renderSetup() {
+    main.innerHTML = `
+      <div class="settings-page-title">Setup</div>
+      <div class="settings-page-desc">System dependencies and features</div>
+      <div class="settings-section"><div class="settings-row"><div class="settings-row-info"><div class="settings-row-name" style="color:var(--gray-500)">Scanning system...</div></div></div></div>
+    `;
+
+    try {
+      const res = await fetch('/api/setup');
+      const data = await res.json();
+      renderSetupData(data);
+    } catch {
+      main.innerHTML += '<div style="color:var(--red);padding:8px 0;">Failed to load setup status</div>';
+    }
+  }
+
+  function renderSetupData(data) {
+    let html = `
+      <div class="settings-page-title">Setup</div>
+      <div class="settings-page-desc">${data.distro} &mdash; ${data.pkg_manager}</div>
+    `;
+
+    const installed = data.items.filter(i => i.installed);
+    const missing = data.items.filter(i => !i.installed);
+
+    if (missing.length > 0) {
+      html += '<div class="settings-section"><div class="sysmon-section-title" style="color:var(--red);">Missing</div>';
+      for (const item of missing) {
+        html += setupItemHtml(item);
+      }
+      html += '</div>';
+    }
+
+    if (installed.length > 0) {
+      html += '<div class="settings-section"><div class="sysmon-section-title">Installed</div>';
+      for (const item of installed) {
+        html += setupItemHtml(item);
+      }
+      html += '</div>';
+    }
+
+    main.innerHTML = html;
+
+    // attach button handlers
+    main.querySelectorAll('.setup-install-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const cmd = btn.dataset.cmd;
+        // open a terminal with the command
+        const content = buildTerminalContent();
+        const win = createWindow('terminal', 'Install', content, 700, 400);
+        // wait for terminal to connect, then send the command
+        setTimeout(() => {
+          // find the terminal's websocket and send the command
+          const panes = win.querySelectorAll('.term-pane');
+          if (panes.length > 0) {
+            // the terminal auto-connects, just need to type the command
+            // We'll use a small trick: dispatch the command after the terminal is ready
+            setTimeout(() => {
+              // find the xterm textarea and simulate typing
+              const textarea = win.querySelector('.xterm-helper-textarea');
+              if (textarea) {
+                // send via the websocket directly
+                const termApp = win.querySelector('.term-app');
+                // actually, let's just copy to clipboard and show instruction
+              }
+            }, 500);
+          }
+        }, 1000);
+      });
+    });
+
+    main.querySelectorAll('.setup-copy-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        navigator.clipboard.writeText(btn.dataset.cmd);
+        btn.textContent = 'Copied';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+      });
+    });
+
+    main.querySelectorAll('.setup-terminal-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const cmd = btn.dataset.cmd;
+        openTerminalWithCommand(cmd);
+      });
+    });
+  }
+
+  function setupItemHtml(item) {
+    const statusClass = item.installed ? 'setup-status--ok' : 'setup-status--missing';
+    const statusText = item.installed ? 'Installed' : 'Not installed';
+    const version = item.version ? `<span class="setup-version">${item.version}</span>` : '';
+
+    let actions = '';
+    if (!item.installed && !item.install_cmd.startsWith('#')) {
+      actions = `
+        <div class="setup-actions">
+          <code class="setup-cmd">${item.install_cmd}</code>
+          <button class="setup-copy-btn" data-cmd="${item.install_cmd}">Copy</button>
+          <button class="setup-terminal-btn" data-cmd="${item.install_cmd}">Run in Terminal</button>
+        </div>
+      `;
+    } else if (!item.installed) {
+      actions = `<div class="setup-actions"><code class="setup-cmd">${item.install_cmd}</code></div>`;
+    }
+
+    return `
+      <div class="setup-item">
+        <div class="setup-item-header">
+          <div class="setup-item-info">
+            <span class="setup-item-name">${item.name}</span>
+            <span class="${statusClass}">${statusText}</span>
+            ${version}
+          </div>
+          <div class="setup-item-desc">${item.description}</div>
+        </div>
+        ${actions}
+      </div>
+    `;
+  }
 
   function renderGeneral() {
     const g = cfg.settings.general || {};
@@ -2703,6 +2832,25 @@ function applySettings() {
 }
 // apply on load
 applySettings();
+
+// ── Open terminal with pre-typed command ──
+
+// global registry of terminal panes so we can send input from outside
+const terminalPanes = {};
+
+function openTerminalWithCommand(cmd) {
+  const content = buildTerminalContent();
+  createWindow('terminal', 'Install', content, 700, 400);
+  // wait for connection, then type the command (don't press enter — let user confirm)
+  setTimeout(() => {
+    const ids = Object.keys(terminalPanes);
+    if (ids.length > 0) {
+      const lastId = ids[ids.length - 1];
+      const pane = terminalPanes[lastId];
+      if (pane) pane.sendInput(cmd);
+    }
+  }, 1500);
+}
 
 // ── X Bridge ──
 

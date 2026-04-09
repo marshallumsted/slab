@@ -6,6 +6,7 @@ mod apps;
 mod config;
 mod files;
 mod media;
+mod setup;
 mod sysmon;
 mod terminal;
 mod xbridge;
@@ -40,6 +41,7 @@ async fn main() {
         .route("/api/apps", get(apps::list_apps))
         .route("/api/apps/launch", post(apps::launch_app))
         .route("/api/apps/icon", get(apps::serve_icon))
+        .route("/api/setup", get(setup::get_status))
         .route("/api/xbridge/status", get(xbridge::status))
         .route("/api/xbridge/launch", post(xbridge::launch))
         .route("/api/xbridge/stop", post(xbridge::stop));

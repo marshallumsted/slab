@@ -2087,6 +2087,130 @@ body.theme-light .window-body:has(.term-app) {
   border-color: var(--red);
 }
 
+/* Setup highlight nav item */
+.settings-nav-highlight {
+  color: var(--red) !important;
+  font-weight: 700;
+}
+
+.settings-nav-highlight.active {
+  color: var(--white) !important;
+  background: var(--red);
+  border-left-color: var(--white);
+}
+
+/* Setup items */
+.setup-item {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--gray-800);
+}
+
+.setup-item:last-child {
+  border-bottom: none;
+}
+
+.setup-item-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.setup-item-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.setup-item-name {
+  font-size: .7rem;
+  font-weight: 700;
+  color: var(--white);
+}
+
+.setup-item-desc {
+  font-size: .6rem;
+  color: var(--gray-500);
+}
+
+.setup-status--ok {
+  font-size: .5rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #4caf50;
+}
+
+.setup-status--missing {
+  font-size: .5rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--red);
+}
+
+.setup-version {
+  font-size: .5rem;
+  color: var(--gray-500);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.setup-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.setup-cmd {
+  font-family: var(--font-mono);
+  font-size: .6rem;
+  background: var(--gray-800);
+  color: var(--gray-300);
+  padding: 4px 8px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.setup-copy-btn,
+.setup-terminal-btn {
+  font-family: var(--font-mono);
+  font-size: .55rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border: none;
+  cursor: pointer;
+  transition: background .15s;
+  white-space: nowrap;
+}
+
+.setup-copy-btn {
+  background: var(--gray-700);
+  color: var(--gray-300);
+}
+
+.setup-copy-btn:hover {
+  background: var(--gray-600);
+  color: var(--white);
+}
+
+.setup-terminal-btn {
+  background: var(--red);
+  color: #fff;
+}
+
+.setup-terminal-btn:hover {
+  background: var(--red-hover);
+}
+
 /* Lock indicator */
 .settings-lock {
   font-size: .5rem;
