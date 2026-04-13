@@ -1,44 +1,75 @@
-# [S] slab
+# [S] slab-base
 
-A brutalist desktop environment. Pure Rust. Wayland native.
+The slab desktop environment. Pure Rust Wayland compositor.
 
-Sharp edges. Flat blocks. Zero rounded corners. One compositor. Your desktop, your workflow.
+This is the shell — the compositor, window manager, tiling engine, and bars. No apps included. Install slab apps as separate packages, or use any Wayland app.
 
-## What is slab
+## What's in the base
 
-A native Linux desktop environment built from scratch in Rust. Not a theme on top of KDE. Not a web app in a browser. A real Wayland compositor that renders your desktop, manages your windows, and runs your apps.
+- **Wayland compositor** — Smithay, DRM/KMS output, boots from TTY
+- **Window manager** — position, resize, focus, close, alt-tab, snap
+- **Tiling engine** — Hyprland-style auto-tiling with iPadOS-style resize
+- **Top bar** — clock, system icons (theme, volume, network), contextual app settings area
+- **Bottom bar** — open windows, quick-spawn buttons (populated by installed slab apps)
+- **Tile grid** — the home surface, replaces the desktop, masonry layout
+- **Config system** — `~/.config/slab/`, theme, workspaces, settings persistence
+- **App loader** — scans for installed slab apps, loads manifests, registers tiles and spawn entries
+- **Theme engine** — design tokens (colors, fonts, spacing), dark/light
+- **GPU rendering** — wgpu
+- **Input** — libinput (keyboard, mouse, touchpad, touchscreen)
+- **Multi-monitor** — DRM/KMS multi-head support
 
-### Design principles
+## What's NOT in the base
+
+No file browser. No terminal. No editor. No system monitor. No settings panel. These are all separate packages:
+
+| Package | Description |
+|---------|-------------|
+| [slab-web](https://github.com/marshallumsted/slab-web) | Remote browser access module |
+| slab-terminal | Terminal emulator |
+| slab-files | File browser |
+| slab-editor | Text editor |
+| slab-sysmon | System monitor |
+| slab-notes | Notes and sticky notes |
+| slab-settings | Settings panel |
+
+Each app is a standalone Wayland application. It runs inside slab, or install it on KDE/GNOME — same binary.
+
+## First boot with zero apps
+
+You get: two bars, an empty tile grid, a clock. Open any Wayland app (Firefox, foot, Nautilus) and slab manages its window. That's a functional desktop.
+
+## Design
 
 - **0px border-radius.** No exceptions.
 - **Flat solid colors.** No gradients, no shadows.
-- **Bold type.** Instrument Sans + Space Mono. High contrast.
-- **Dense and information-heavy.** No wasted whitespace.
-- **Sharp, blocky, unapologetic.**
+- **Bold type.** Instrument Sans + Space Mono.
+- **Dense and information-heavy.**
 
-### What makes slab different
+See [DESIGN.md](DESIGN.md) for the full compositor architecture.
 
-- **Tiles are not apps.** Tiles are the relevant pieces of apps, composed into a surface that fits your workflow.
-- **Workspaces are not virtual desktops.** They change everything — files, bookmarks, terminals, toolbar tools — not just which windows are visible.
-- **Build an app for your task.** Workflows are custom apps assembled from tiles, scoped folders, pinned bookmarks, and terminals.
-- **Two bars.** Top: contextual app settings + system icons. Bottom: open apps + quick-spawn tools.
+## Build
 
-## Architecture
+```bash
+cargo build --release
+```
 
-- **Compositor:** Smithay (pure Rust Wayland compositor)
-- **Rendering:** wgpu (GPU-accelerated)
-- **Input:** libinput (keyboard, mouse, touch)
-- **Apps:** Native Rust crates implementing a common `SlabApp` trait
-- **Native apps:** Any Wayland client (Firefox, VS Code, Steam, etc.)
-- **Config:** `~/.config/slab/`
+### Requirements
 
-## Related
+- Rust 1.85+
+- Wayland development libraries
+- libinput, libudev, libgbm, libdrm
 
-- [slab-web](https://github.com/marshallumsted/slab-web) — Remote access module. Access the slab desktop from any browser. Runs standalone on headless servers/VMs, or alongside the native DE for remote access.
+### Run
 
-## Status
+```bash
+# from TTY (no existing DE)
+./target/release/slab-base
 
-Design phase. See [DESIGN.md](DESIGN.md) for the full architecture.
+# or install the systemd service
+sudo cp slab-base.service /etc/systemd/system/
+sudo systemctl enable slab-base
+```
 
 ## License
 
